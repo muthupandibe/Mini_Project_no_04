@@ -1,6 +1,5 @@
 # ============================================================
-# FILE: Step7_Insights_Reporting.py
-# PROJECT: Mobile Product Segmentation and Recommendation System
+# Step7_Insights_Reporting.py
 # ============================================================
 
 import os
@@ -15,7 +14,9 @@ import seaborn as sns
 
 cleaned_file = "cleaned_mobile_reviews.csv"
 
-clustered_file = "clustered_mobile_reviews.csv"
+# IMPORTANT:
+# Step4 corrected version creates this file
+clustered_file = "clustered_mobile_products.csv"
 
 output_folder = "insights"
 
@@ -49,12 +50,18 @@ if not os.path.exists(clustered_file):
 # 3. LOAD DATA
 # ============================================================
 
-df = pd.read_csv(cleaned_file)
+df = pd.read_csv(
+    cleaned_file
+)
 
-clustered_df = pd.read_csv(clustered_file)
+clustered_df = pd.read_csv(
+    clustered_file
+)
 
 
-df.columns = df.columns.str.strip()
+df.columns = (
+    df.columns.str.strip()
+)
 
 clustered_df.columns = (
     clustered_df.columns.str.strip()
@@ -72,7 +79,7 @@ print(
 )
 
 print(
-    "Clustered Dataset Shape:",
+    "Clustered Product Dataset Shape:",
     clustered_df.shape
 )
 
@@ -84,23 +91,16 @@ print(
 required_columns = [
 
     "brand",
-
     "model",
-
     "price_usd",
-
     "rating",
-
     "battery_life_rating",
-
     "camera_rating",
-
     "performance_rating",
-
     "design_rating",
-
-    "display_rating"
-
+    "display_rating",
+    "Cluster",
+    "Segment"
 ]
 
 
@@ -133,27 +133,33 @@ if missing_columns:
 
 
 # ============================================================
-# 5. NUMERIC CONVERSION
+# 5. NUMERIC COLUMNS
 # ============================================================
 
 numeric_columns = [
 
     "price_usd",
-
     "rating",
-
     "battery_life_rating",
-
     "camera_rating",
-
     "performance_rating",
-
     "design_rating",
-
     "display_rating"
 
 ]
 
+
+# Add engagement score if available
+if "engagement_score" in clustered_df.columns:
+
+    numeric_columns.append(
+        "engagement_score"
+    )
+
+
+# ============================================================
+# 6. NUMERIC CONVERSION
+# ============================================================
 
 for column in numeric_columns:
 
@@ -167,18 +173,51 @@ for column in numeric_columns:
 
 
 # ============================================================
-# 6. HANDLE MISSING VALUES
+# 7. HANDLE INFINITE VALUES
 # ============================================================
+
+clustered_df[numeric_columns] = (
+
+    clustered_df[numeric_columns]
+
+    .replace(
+        [float("inf"), float("-inf")],
+        pd.NA
+    )
+
+)
+
+
+# ============================================================
+# 8. HANDLE MISSING VALUES
+# ============================================================
+
+print("\n" + "=" * 75)
+print("MISSING VALUE CHECK")
+print("=" * 75)
+
+
+print("\nMissing values before handling:")
+
+print(
+    clustered_df[numeric_columns]
+    .isnull()
+    .sum()
+)
+
 
 for column in numeric_columns:
 
     median_value = (
-        clustered_df[column].median()
+        clustered_df[column]
+        .median()
     )
+
 
     if pd.isna(median_value):
 
         median_value = 0
+
 
     clustered_df[column] = (
 
@@ -187,6 +226,15 @@ for column in numeric_columns:
         .fillna(median_value)
 
     )
+
+
+print("\nMissing values after handling:")
+
+print(
+    clustered_df[numeric_columns]
+    .isnull()
+    .sum()
+)
 
 
 # ============================================================
@@ -199,13 +247,9 @@ print("1. PRODUCT SEGMENTATION ANALYSIS")
 print("=" * 75)
 
 
-if "Cluster" not in clustered_df.columns:
-
-    raise ValueError(
-        "\nERROR: Cluster column not found."
-        "\nPlease run Step4_Clustering.py first."
-    )
-
+# ------------------------------------------------------------
+# Cluster Profile
+# ------------------------------------------------------------
 
 cluster_profile = (
 
@@ -217,8 +261,14 @@ cluster_profile = (
 
     .round(2)
 
+    .reset_index()
+
 )
 
+
+# ------------------------------------------------------------
+# Cluster Counts
+# ------------------------------------------------------------
 
 cluster_counts = (
 
@@ -229,9 +279,7 @@ cluster_counts = (
     .size()
 
     .reset_index(
-
         name="Product_Count"
-
     )
 
 )
@@ -241,14 +289,10 @@ cluster_profile = (
 
     cluster_profile
 
-    .reset_index()
-
     .merge(
-
         cluster_counts,
-
-        on="Cluster"
-
+        on="Cluster",
+        how="left"
     )
 
 )
@@ -266,39 +310,33 @@ cluster_profile["Percentage"] = (
 
 
 # ------------------------------------------------------------
-# Add Segment Names
+# Segment Names
 # ------------------------------------------------------------
 
-if "Segment" in clustered_df.columns:
+segment_mapping = (
 
-    segment_mapping = (
+    clustered_df[
+        ["Cluster", "Segment"]
+    ]
 
-        clustered_df[
-
-            ["Cluster", "Segment"]
-
-        ]
-
-        .drop_duplicates()
-
+    .drop_duplicates(
+        subset=["Cluster"]
     )
 
+)
 
-    cluster_profile = (
 
-        cluster_profile
+cluster_profile = (
 
-        .merge(
+    cluster_profile
 
-            segment_mapping,
-
-            on="Cluster",
-
-            how="left"
-
-        )
-
+    .merge(
+        segment_mapping,
+        on="Cluster",
+        how="left"
     )
+
+)
 
 
 print("\nCluster Profile:")
@@ -344,22 +382,13 @@ print("2. HIGH-PERFORMING PRODUCTS")
 print("=" * 75)
 
 
-# ------------------------------------------------------------
-# Create Overall Performance Score
-# ------------------------------------------------------------
-
 performance_columns = [
 
     "rating",
-
     "battery_life_rating",
-
     "camera_rating",
-
     "performance_rating",
-
     "design_rating",
-
     "display_rating"
 
 ]
@@ -396,19 +425,12 @@ high_performing_display = high_performing[
     [
 
         "brand",
-
         "model",
-
         "price_usd",
-
         "rating",
-
         "camera_rating",
-
         "performance_rating",
-
         "battery_life_rating",
-
         "Overall_Performance_Score"
 
     ]
@@ -425,7 +447,10 @@ high_performing_display = (
 )
 
 
-print("\nTop 10 High-Performing Products:")
+print(
+    "\nTop 10 High-Performing Products:"
+)
+
 
 print(
 
@@ -486,19 +511,12 @@ low_performing_display = low_performing[
     [
 
         "brand",
-
         "model",
-
         "price_usd",
-
         "rating",
-
         "camera_rating",
-
         "performance_rating",
-
         "battery_life_rating",
-
         "Overall_Performance_Score"
 
     ]
@@ -515,7 +533,10 @@ low_performing_display = (
 )
 
 
-print("\nBottom 10 Low-Performing Products:")
+print(
+    "\nBottom 10 Low-Performing Products:"
+)
+
 
 print(
 
@@ -559,11 +580,8 @@ price_performance_correlation = (
     clustered_df[
 
         [
-
             "price_usd",
-
             "Overall_Performance_Score"
-
         ]
 
     ]
@@ -577,17 +595,59 @@ price_performance_correlation = (
 
 print(
 
-    "\nPrice vs Overall Performance "
-    "Correlation:",
+    "\nPrice vs Overall Performance Correlation:",
 
     round(
-
         price_performance_correlation,
-
         4
-
     )
 
+)
+
+
+# ------------------------------------------------------------
+# Interpret Correlation
+# ------------------------------------------------------------
+
+if price_performance_correlation >= 0.70:
+
+    price_message = (
+        "There is a strong positive relationship "
+        "between price and overall performance."
+    )
+
+elif price_performance_correlation >= 0.30:
+
+    price_message = (
+        "There is a moderate positive relationship "
+        "between price and overall performance."
+    )
+
+elif price_performance_correlation > -0.30:
+
+    price_message = (
+        "There is a weak relationship between "
+        "price and overall performance."
+    )
+
+elif price_performance_correlation > -0.70:
+
+    price_message = (
+        "There is a moderate negative relationship "
+        "between price and overall performance."
+    )
+
+else:
+
+    price_message = (
+        "There is a strong negative relationship "
+        "between price and overall performance."
+    )
+
+
+print(
+    "\nInterpretation:",
+    price_message
 )
 
 
@@ -596,63 +656,39 @@ print(
 # ------------------------------------------------------------
 
 plt.figure(
-
     figsize=(9, 6)
+)
+
+
+sns.scatterplot(
+
+    data=clustered_df,
+
+    x="price_usd",
+
+    y="Overall_Performance_Score",
+
+    hue="Segment",
+
+    s=70,
+
+    alpha=0.75
 
 )
 
 
-if "Segment" in clustered_df.columns:
-
-    sns.scatterplot(
-
-        data=clustered_df,
-
-        x="price_usd",
-
-        y="Overall_Performance_Score",
-
-        hue="Segment",
-
-        alpha=0.7
-
-    )
-
-else:
-
-    sns.scatterplot(
-
-        data=clustered_df,
-
-        x="price_usd",
-
-        y="Overall_Performance_Score",
-
-        hue="Cluster",
-
-        alpha=0.7
-
-    )
-
-
 plt.title(
-
     "Price vs Overall Product Performance"
-
 )
 
 
 plt.xlabel(
-
     "Price (USD)"
-
 )
 
 
 plt.ylabel(
-
     "Overall Performance Score"
-
 )
 
 
@@ -693,13 +729,9 @@ clustered_df["Price_Range"] = pd.cut(
     bins=[
 
         -float("inf"),
-
         200,
-
         400,
-
         700,
-
         float("inf")
 
     ],
@@ -707,14 +739,13 @@ clustered_df["Price_Range"] = pd.cut(
     labels=[
 
         "Budget",
-
         "Mid-Range",
-
         "Upper Mid-Range",
-
         "Premium"
 
-    ]
+    ],
+
+    include_lowest=True
 
 )
 
@@ -729,16 +760,12 @@ price_range_analysis = (
 
         observed=False
 
-    )
-
-    [
+    )[
 
         [
 
             "price_usd",
-
             "rating",
-
             "Overall_Performance_Score"
 
         ]
@@ -752,9 +779,14 @@ price_range_analysis = (
 )
 
 
-print("\nPrice Range Performance:")
+print(
+    "\nPrice Range Performance:"
+)
 
-print(price_range_analysis)
+
+print(
+    price_range_analysis
+)
 
 
 price_range_file = os.path.join(
@@ -775,26 +807,21 @@ price_range_analysis.to_csv(
 
 # ============================================================
 # INSIGHT 5
-# CUSTOMER PREFERENCE PATTERNS
+# PRODUCT ATTRIBUTE PATTERNS
 # ============================================================
 
 print("\n" + "=" * 75)
-print("5. CUSTOMER PREFERENCE PATTERNS")
+print("5. PRODUCT ATTRIBUTE / PREFERENCE PATTERNS")
 print("=" * 75)
 
 
 preference_features = [
 
     "rating",
-
     "battery_life_rating",
-
     "camera_rating",
-
     "performance_rating",
-
     "design_rating",
-
     "display_rating"
 
 ]
@@ -822,21 +849,17 @@ preference_analysis = (
 
 
 print(
-
     "\nAverage Feature Ratings:"
-
 )
 
 
 print(
-
     preference_analysis
-
 )
 
 
 # ------------------------------------------------------------
-# Feature Preference Ranking
+# Feature Ranking
 # ------------------------------------------------------------
 
 preference_ranking = (
@@ -851,7 +874,6 @@ preference_ranking = (
 preference_ranking.columns = [
 
     "Feature",
-
     "Average_Rating"
 
 ]
@@ -860,9 +882,7 @@ preference_ranking.columns = [
 preference_ranking["Rank"] = (
 
     preference_ranking[
-
         "Average_Rating"
-
     ]
 
     .rank(
@@ -882,15 +902,15 @@ preference_ranking = (
 
     preference_ranking
 
-    .sort_values("Rank")
+    .sort_values(
+        "Rank"
+    )
 
 )
 
 
 print(
-
     "\nFeature Preference Ranking:"
-
 )
 
 
@@ -923,7 +943,7 @@ preference_ranking.to_csv(
 
 # ============================================================
 # INSIGHT 6
-# BRAND ANALYSIS
+# BRAND PERFORMANCE ANALYSIS
 # ============================================================
 
 print("\n" + "=" * 75)
@@ -942,7 +962,6 @@ brand_analysis = (
         Product_Count=(
 
             "model",
-
             "count"
 
         ),
@@ -950,7 +969,6 @@ brand_analysis = (
         Average_Price=(
 
             "price_usd",
-
             "mean"
 
         ),
@@ -958,7 +976,6 @@ brand_analysis = (
         Average_Rating=(
 
             "rating",
-
             "mean"
 
         ),
@@ -966,7 +983,6 @@ brand_analysis = (
         Average_Performance=(
 
             "Overall_Performance_Score",
-
             "mean"
 
         )
@@ -987,9 +1003,7 @@ brand_analysis = (
 
 
 print(
-
     "\nBrand Performance Summary:"
-
 )
 
 
@@ -1052,21 +1066,11 @@ largest_cluster = (
 )
 
 
-if "Segment" in cluster_profile.columns:
+largest_segment = (
 
-    largest_segment = (
+    largest_cluster["Segment"]
 
-        largest_cluster["Segment"]
-
-    )
-
-else:
-
-    largest_segment = (
-
-        f"Cluster {int(largest_cluster['Cluster'])}"
-
-    )
+)
 
 
 insight_1 = (
@@ -1079,14 +1083,21 @@ insight_1 = (
 
     f"products "
 
-    f"({largest_cluster['Percentage']:.2f}% of the dataset)."
+    f"({largest_cluster['Percentage']:.2f}% "
+    f"of the product dataset)."
 
 )
 
 
-print("\n1.", insight_1)
+print(
+    "\n1.",
+    insight_1
+)
 
-insights.append(insight_1)
+
+insights.append(
+    insight_1
+)
 
 
 # ------------------------------------------------------------
@@ -1095,7 +1106,9 @@ insights.append(insight_1)
 
 best_product = (
 
-    high_performing_display.iloc[0]
+    high_performing_display
+
+    .iloc[0]
 
 )
 
@@ -1117,9 +1130,15 @@ insight_2 = (
 )
 
 
-print("\n2.", insight_2)
+print(
+    "\n2.",
+    insight_2
+)
 
-insights.append(insight_2)
+
+insights.append(
+    insight_2
+)
 
 
 # ------------------------------------------------------------
@@ -1128,7 +1147,9 @@ insights.append(insight_2)
 
 worst_product = (
 
-    low_performing_display.iloc[0]
+    low_performing_display
+
+    .iloc[0]
 
 )
 
@@ -1148,62 +1169,30 @@ insight_3 = (
 )
 
 
-print("\n3.", insight_3)
+print(
+    "\n3.",
+    insight_3
+)
 
-insights.append(insight_3)
+
+insights.append(
+    insight_3
+)
 
 
 # ------------------------------------------------------------
 # Price Performance Insight
 # ------------------------------------------------------------
 
-if price_performance_correlation > 0.5:
-
-    price_message = (
-
-        "There is a strong positive relationship "
-
-        "between product price and overall performance."
-
-    )
+print(
+    "\n4.",
+    price_message
+)
 
 
-elif price_performance_correlation > 0.2:
-
-    price_message = (
-
-        "There is a moderate positive relationship "
-
-        "between product price and overall performance."
-
-    )
-
-
-elif price_performance_correlation > -0.2:
-
-    price_message = (
-
-        "There is a weak relationship between "
-
-        "product price and overall performance."
-
-    )
-
-
-else:
-
-    price_message = (
-
-        "There is a negative relationship between "
-
-        "product price and overall performance."
-
-    )
-
-
-print("\n4.", price_message)
-
-insights.append(price_message)
+insights.append(
+    price_message
+)
 
 
 # ------------------------------------------------------------
@@ -1212,7 +1201,9 @@ insights.append(price_message)
 
 top_preference = (
 
-    preference_ranking.iloc[0]
+    preference_ranking
+
+    .iloc[0]
 
 )
 
@@ -1230,45 +1221,35 @@ insight_5 = (
 )
 
 
-print("\n5.", insight_5)
+print(
+    "\n5.",
+    insight_5
+)
 
-insights.append(insight_5)
+
+insights.append(
+    insight_5
+)
 
 
 # ------------------------------------------------------------
 # Brand Insight
 # ------------------------------------------------------------
 
-best_brand = (
-
-    brand_analysis
-
-    .sort_values(
-
-        "Average_Performance",
-
-        ascending=False
-
-    )
-
-    .iloc[0]
-
-)
-
-
 best_brand_name = (
 
     brand_analysis
 
-    .sort_values(
-
-        "Average_Performance",
-
-        ascending=False
-
-    )
-
     .index[0]
+
+)
+
+
+best_brand = (
+
+    brand_analysis
+
+    .iloc[0]
 
 )
 
@@ -1286,9 +1267,15 @@ insight_6 = (
 )
 
 
-print("\n6.", insight_6)
+print(
+    "\n6.",
+    insight_6
+)
 
-insights.append(insight_6)
+
+insights.append(
+    insight_6
+)
 
 
 # ============================================================
@@ -1304,13 +1291,13 @@ decision_recommendations = [
 
     "Use product segmentation to identify Budget, Mid-Range, Upper Mid-Range and Premium market groups.",
 
-    "Prioritize high-performing product features when evaluating new or existing mobile products.",
+    "Prioritize high-performing product attributes when evaluating existing or new mobile products.",
 
     "Use price-versus-performance analysis to identify products offering stronger value for money.",
 
-    "Use rating patterns to understand which product attributes receive stronger customer evaluations.",
+    "Use product rating patterns to understand which measured attributes receive stronger evaluations.",
 
-    "Use brand-level performance comparisons to support product portfolio and competitive analysis.",
+    "Use brand-level performance comparisons to support competitive and product portfolio analysis.",
 
     "Use the recommendation system to help customers discover products with similar characteristics."
 
@@ -1355,6 +1342,7 @@ with open(
 
 ) as file:
 
+
     file.write(
 
         "MOBILE PRODUCT SEGMENTATION & "
@@ -1362,45 +1350,36 @@ with open(
 
     )
 
-    file.write(
 
+    file.write(
         "=" * 75 + "\n\n"
-
     )
 
 
     file.write(
-
         "1. PRODUCT SEGMENTATION\n"
-
     )
 
+
     file.write(
-
         "-" * 40 + "\n"
-
     )
 
 
     for insight in insights:
 
         file.write(
-
             f"- {insight}\n"
-
         )
 
 
     file.write(
-
         "\n\n2. DATA-DRIVEN DECISION MAKING\n"
-
     )
 
+
     file.write(
-
         "-" * 40 + "\n"
-
     )
 
 
@@ -1420,15 +1399,40 @@ with open(
 
 
     file.write(
-
-        "\n\n3. IMPORTANT NOTE\n"
-
+        "\n\n3. MODEL INFORMATION\n"
     )
 
+
     file.write(
-
         "-" * 40 + "\n"
+    )
 
+
+    file.write(
+        "Clustering Method: K-Means\n"
+    )
+
+
+    if "Segment" in clustered_df.columns:
+
+        number_of_segments = (
+            clustered_df["Segment"]
+            .nunique()
+        )
+
+        file.write(
+            f"Number of Segments: "
+            f"{number_of_segments}\n"
+        )
+
+
+    file.write(
+        "\n\n4. IMPORTANT NOTE\n"
+    )
+
+
+    file.write(
+        "-" * 40 + "\n"
     )
 
 
@@ -1438,7 +1442,10 @@ with open(
         "from product ratings and specifications. "
         "The dataset does not contain direct "
         "individual customer purchase-history or "
-        "preference data.\n"
+        "personal preference data. Therefore, these "
+        "patterns should be interpreted as product "
+        "attribute patterns rather than direct "
+        "customer-level preferences.\n"
 
     )
 
@@ -1452,63 +1459,52 @@ print("INSIGHTS & REPORTING COMPLETED SUCCESSFULLY")
 print("=" * 75)
 
 
-print("\nOutput Folder:")
-
 print(
-
+    "\nOutput Folder:",
     f"{output_folder}/"
-
 )
 
 
 print("\nGenerated Files:")
 
-print(
 
+print(
     "1. cluster_wise_analysis.csv"
-
 )
 
-print(
 
+print(
     "2. high_performing_products.csv"
-
 )
 
-print(
 
+print(
     "3. low_performing_products.csv"
-
 )
 
-print(
 
+print(
     "4. price_range_performance.csv"
-
 )
 
-print(
 
+print(
     "5. customer_preference_patterns.csv"
-
 )
 
-print(
 
+print(
     "6. brand_performance_analysis.csv"
-
 )
 
-print(
 
+print(
     "7. price_vs_performance.png"
-
 )
 
+
 print(
-
     "8. mobile_product_insights_report.txt"
-
 )
 
 

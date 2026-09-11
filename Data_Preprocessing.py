@@ -1,9 +1,9 @@
 # ============================================================
-# FILE: Step2_Data_Preprocessing.py
-# PROJECT: Mobile Product Segmentation and Recommendation System
+# Step2_Data_Preprocessing.py
 # ============================================================
 
 import os
+import numpy as np
 import pandas as pd
 
 
@@ -28,9 +28,12 @@ if not os.path.exists(input_file):
         f"\nERROR: Input file not found: {input_file}"
     )
 
-df = pd.read_csv(input_file)
+df = pd.read_csv(
+    input_file,
+    low_memory=False
+)
 
-# Remove spaces from column names
+# Remove leading/trailing spaces from column names
 df.columns = df.columns.str.strip()
 
 print("\nDataset loaded successfully.")
@@ -45,12 +48,12 @@ print("\n" + "=" * 70)
 print("ORIGINAL COLUMNS")
 print("=" * 70)
 
-for column in df.columns:
-    print("-", column)
+for i, column in enumerate(df.columns, start=1):
+    print(f"{i}. {column}")
 
 
 # ============================================================
-# 4. CHECK REQUIRED PRODUCT COLUMNS
+# 4. CHECK REQUIRED COLUMNS
 # ============================================================
 
 required_columns = [
@@ -71,102 +74,113 @@ missing_columns = [
 ]
 
 if missing_columns:
-
     raise ValueError(
-        "\nERROR: The following required columns are missing:\n"
+        "\nERROR: Required columns are missing:\n"
         + "\n".join(
             f"- {column}"
             for column in missing_columns
         )
     )
 
+print("\nRequired columns verified successfully.")
+
 
 # ============================================================
 # 5. HANDLE BRAND
 # ============================================================
-# The current dataset may already contain one-hot encoded
-# brand columns such as:
-#
-# brand_Apple
-# brand_Google
-# brand_Motorola
-# brand_OnePlus
-# brand_Realme
-# brand_Samsung
-# brand_Xiaomi
-#
-# If a normal "brand" column exists, keep it.
-#
-# If only brand_* columns exist, reconstruct the brand column.
-# This makes the preprocessing compatible with Step 5.
-# ============================================================
-
-brand_columns = [
-    column
-    for column in df.columns
-    if column.startswith("brand_")
-]
 
 if "brand" not in df.columns:
 
-    if len(brand_columns) > 0:
+    brand_columns = [
+        column
+        for column in df.columns
+        if column.lower().startswith("brand_")
+    ]
 
-        print("\n" + "=" * 70)
-        print("RECONSTRUCTING BRAND COLUMN")
-        print("=" * 70)
+    if brand_columns:
 
-        print(
-            "\nOne-hot encoded brand columns detected:"
+        print("\nBrand one-hot columns detected.")
+
+        # Vectorized reconstruction instead of apply()
+        brand_values = df[brand_columns].apply(
+            pd.to_numeric,
+            errors="coerce"
         )
 
-        for column in brand_columns:
-            print("-", column)
+        brand_name = brand_values.idxmax(axis=1)
 
-        def get_brand(row):
+        max_value = brand_values.max(axis=1)
 
-            for column in brand_columns:
-
-                value = row[column]
-
-                if pd.notna(value):
-
-                    try:
-                        if float(value) == 1:
-                            return column.replace(
-                                "brand_",
-                                ""
-                            )
-                    except (ValueError, TypeError):
-                        pass
-
-            return "Unknown"
-
-        df["brand"] = df.apply(
-            get_brand,
-            axis=1
+        df["brand"] = np.where(
+            max_value > 0,
+            brand_name.str.replace(
+                "brand_",
+                "",
+                regex=False
+            ),
+            "Unknown"
         )
 
-        print(
-            "\nOriginal 'brand' column reconstructed successfully."
+        # Remove original one-hot columns
+        df.drop(
+            columns=brand_columns,
+            inplace=True
         )
 
-        # Remove one-hot encoded brand columns
-        df = df.drop(
-            columns=brand_columns
-        )
+        print("Brand column reconstructed successfully.")
 
     else:
 
-        # If no brand information exists
         print(
-            "\nWARNING: No brand column or brand_* columns found."
+            "\nWARNING: 'brand' column not found."
         )
 
         df["brand"] = "Unknown"
 
 
 # ============================================================
-# 6. CONVERT NUMERIC COLUMNS
+# 6. HANDLE OPTIONAL COUNTRY COLUMN
+# ============================================================
+
+if "country" in df.columns:
+
+    print("\nCountry column detected.")
+
+    df["country"] = (
+        df["country"]
+        .astype("string")
+        .str.strip()
+    )
+
+    df["country"] = df["country"].fillna(
+        "Unknown"
+    )
+
+else:
+
+    print(
+        "\nNOTE: Country column is not available "
+        "in the dataset."
+    )
+
+
+# ============================================================
+# 7. HANDLE MODEL COLUMN
+# ============================================================
+
+df["model"] = (
+    df["model"]
+    .astype("string")
+    .str.strip()
+)
+
+df["model"] = df["model"].fillna(
+    "Unknown"
+)
+
+
+# ============================================================
+# 8. NUMERIC COLUMNS
 # ============================================================
 
 numeric_columns = [
@@ -179,14 +193,19 @@ numeric_columns = [
     "display_rating"
 ]
 
-# Add engagement_score only if it exists
+# Add engagement score if available
 if "engagement_score" in df.columns:
     numeric_columns.append(
         "engagement_score"
     )
 
+
+# ============================================================
+# 9. DATA TYPE CONVERSION
+# ============================================================
+
 print("\n" + "=" * 70)
-print("CONVERTING NUMERIC COLUMNS")
+print("DATA TYPE CONVERSION")
 print("=" * 70)
 
 for column in numeric_columns:
@@ -196,11 +215,13 @@ for column in numeric_columns:
         errors="coerce"
     )
 
-    print(f"{column} -> numeric")
+    print(
+        f"{column:<25} -> numeric"
+    )
 
 
 # ============================================================
-# 7. MISSING VALUES BEFORE CLEANING
+# 10. MISSING VALUES BEFORE CLEANING
 # ============================================================
 
 print("\n" + "=" * 70)
@@ -209,16 +230,47 @@ print("=" * 70)
 
 missing_before = df.isnull().sum()
 
-print(
+missing_before = (
     missing_before[
         missing_before > 0
     ]
+    .sort_values(
+        ascending=False
+    )
+)
+
+if missing_before.empty:
+
+    print("No missing values found.")
+
+else:
+
+    print(missing_before)
+
+print(
+    "\nTotal missing values:",
+    df.isnull().sum().sum()
 )
 
 
 # ============================================================
-# 8. FILL NUMERIC MISSING VALUES
+# 11. HANDLE INFINITE VALUES
 # ============================================================
+
+df.replace(
+    [np.inf, -np.inf],
+    np.nan,
+    inplace=True
+)
+
+
+# ============================================================
+# 12. FILL NUMERIC MISSING VALUES
+# ============================================================
+
+print("\n" + "=" * 70)
+print("NUMERIC MISSING VALUE HANDLING")
+print("=" * 70)
 
 for column in numeric_columns:
 
@@ -233,51 +285,67 @@ for column in numeric_columns:
             median_value
         )
 
+        print(
+            f"{column:<25} -> filled with median "
+            f"{median_value:.2f}"
+        )
+
 
 # ============================================================
-# 9. FILL CATEGORICAL MISSING VALUES
+# 13. HANDLE CATEGORICAL MISSING VALUES
 # ============================================================
 
-categorical_columns = df.select_dtypes(
-    include=["object"]
-).columns
+print("\n" + "=" * 70)
+print("CATEGORICAL MISSING VALUE HANDLING")
+print("=" * 70)
+
+categorical_columns = [
+    column
+    for column in [
+        "brand",
+        "country",
+        "model"
+    ]
+    if column in df.columns
+]
 
 for column in categorical_columns:
 
-    if df[column].isnull().any():
+    missing_count = df[column].isnull().sum()
 
-        mode_value = df[column].mode()
+    if missing_count > 0:
 
-        if not mode_value.empty:
+        df[column] = df[column].fillna(
+            "Unknown"
+        )
 
-            df[column] = df[column].fillna(
-                mode_value.iloc[0]
-            )
-
-        else:
-
-            df[column] = df[column].fillna(
-                "Unknown"
-            )
+        print(
+            f"{column:<25} -> filled with 'Unknown'"
+        )
 
 
 # ============================================================
-# 10. REMOVE DUPLICATES
+# 14. REMOVE DUPLICATE RECORDS
 # ============================================================
-
-duplicates_before = df.duplicated().sum()
 
 print("\n" + "=" * 70)
-print("DUPLICATE RECORDS")
+print("DUPLICATE RECORD REMOVAL")
 print("=" * 70)
+
+duplicates_before = df.duplicated().sum()
 
 print(
     "Duplicates before removal:",
     duplicates_before
 )
 
-df = df.drop_duplicates().reset_index(
-    drop=True
+df.drop_duplicates(
+    inplace=True
+)
+
+df.reset_index(
+    drop=True,
+    inplace=True
 )
 
 duplicates_after = df.duplicated().sum()
@@ -289,37 +357,21 @@ print(
 
 
 # ============================================================
-# 11. HANDLE INFINITE VALUES
-# ============================================================
-
-df = df.replace(
-    [float("inf"), float("-inf")],
-    pd.NA
-)
-
-# Refill numeric values if infinite values
-# created missing values
-for column in numeric_columns:
-
-    if df[column].isnull().any():
-
-        median_value = df[column].median()
-
-        if pd.isna(median_value):
-            median_value = 0
-
-        df[column] = df[column].fillna(
-            median_value
-        )
-
-
-# ============================================================
-# 12. SELECT RELEVANT COLUMNS
+# 15. SELECT RELEVANT FEATURES
 # ============================================================
 
 selected_columns = [
     "brand",
-    "model",
+    "model"
+]
+
+# Keep country when available
+if "country" in df.columns:
+    selected_columns.append(
+        "country"
+    )
+
+selected_columns.extend([
     "price_usd",
     "rating",
     "battery_life_rating",
@@ -327,14 +379,14 @@ selected_columns = [
     "performance_rating",
     "design_rating",
     "display_rating"
-]
+])
 
-# Add engagement_score only when available
+# Keep engagement score when available
 if "engagement_score" in df.columns:
-
     selected_columns.append(
         "engagement_score"
     )
+
 
 df_cleaned = df[
     selected_columns
@@ -342,19 +394,19 @@ df_cleaned = df[
 
 
 # ============================================================
-# 13. FINAL MISSING VALUE CHECK
+# 16. FINAL MISSING VALUE CHECK
 # ============================================================
 
 print("\n" + "=" * 70)
 print("FINAL MISSING VALUE CHECK")
 print("=" * 70)
 
-print(
-    df_cleaned.isnull().sum()
-)
+final_missing = df_cleaned.isnull().sum()
+
+print(final_missing)
 
 total_missing = (
-    df_cleaned.isnull().sum().sum()
+    final_missing.sum()
 )
 
 print(
@@ -364,7 +416,7 @@ print(
 
 
 # ============================================================
-# 14. FINAL DATA TYPES
+# 17. FINAL DATA TYPE CHECK
 # ============================================================
 
 print("\n" + "=" * 70)
@@ -377,7 +429,7 @@ print(
 
 
 # ============================================================
-# 15. FINAL DATASET INFORMATION
+# 18. FINAL DATASET INFORMATION
 # ============================================================
 
 print("\n" + "=" * 70)
@@ -391,12 +443,15 @@ print(
 
 print("\nFinal Columns:")
 
-for column in df_cleaned.columns:
-    print("-", column)
+for i, column in enumerate(
+    df_cleaned.columns,
+    start=1
+):
+    print(f"{i}. {column}")
 
 
 # ============================================================
-# 16. DISPLAY SAMPLE DATA
+# 19. DISPLAY SAMPLE DATA
 # ============================================================
 
 print("\n" + "=" * 70)
@@ -411,7 +466,7 @@ print(
 
 
 # ============================================================
-# 17. BRAND DISTRIBUTION
+# 20. BRAND DISTRIBUTION
 # ============================================================
 
 print("\n" + "=" * 70)
@@ -425,13 +480,18 @@ print(
 
 
 # ============================================================
-# 18. SAVE CLEANED DATASET
+# 21. SAVE CLEANED DATASET
 # ============================================================
 
 df_cleaned.to_csv(
     output_file,
     index=False
 )
+
+
+# ============================================================
+# 22. COMPLETION
+# ============================================================
 
 print("\n" + "=" * 70)
 print("PREPROCESSING COMPLETED SUCCESSFULLY")
@@ -442,17 +502,15 @@ print(
     f"\n{output_file}"
 )
 
-print("\nImportant:")
-print(
-    "Brand and model columns were preserved "
-    "for EDA, clustering and recommendation."
-)
+print("\nPreprocessing performed:")
+print("1. Missing value handling")
+print("2. Duplicate removal")
+print("3. Data type conversion")
+print("4. Relevant feature selection")
+print("5. Brand/model/country preservation")
 
+print("\nNote:")
 print(
-    "\nScaling and one-hot encoding are NOT performed "
-    "in Step 2."
-)
-
-print(
-    "Scaling will be performed in the ML stages."
+    "Encoding and scaling will be performed in "
+    "the machine-learning/clustering pipeline."
 )

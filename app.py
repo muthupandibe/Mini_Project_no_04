@@ -1,15 +1,10 @@
 # ============================================================
-# FILE: Step6_Streamlit.py
-# PROJECT: Mobile Product Segmentation and Recommendation System
+# Step6_Streamlit.py
 # ============================================================
 
 import os
 import pandas as pd
 import streamlit as st
-
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics.pairwise import cosine_similarity
-
 import plotly.express as px
 
 
@@ -28,14 +23,12 @@ st.set_page_config(
 # 2. TITLE
 # ============================================================
 
-st.title(
-    "📱 Mobile Product Segmentation & Recommendation System"
-)
+st.title("📱 Mobile Product Segmentation & Recommendation System")
 
 st.markdown(
     """
     This application analyzes mobile products using
-    **K-Means clustering** and provides
+    **K-Means Clustering** and provides
     **similar-product recommendations using Cosine Similarity**.
     """
 )
@@ -47,8 +40,11 @@ st.markdown(
 
 cleaned_file = "cleaned_mobile_reviews.csv"
 
-clustered_file = "clustered_mobile_reviews.csv"
+# IMPORTANT:
+# Step4 corrected output
+clustered_file = "clustered_mobile_products.csv"
 
+# Step5 output
 recommendation_file = os.path.join(
     "recommendations",
     "all_product_recommendations.csv"
@@ -56,7 +52,7 @@ recommendation_file = os.path.join(
 
 
 # ============================================================
-# 4. CHECK FILES
+# 4. CHECK REQUIRED FILES
 # ============================================================
 
 missing_files = []
@@ -73,13 +69,22 @@ if not os.path.exists(recommendation_file):
 
 if missing_files:
 
-    st.error(
-        "Required files are missing."
+    st.error("❌ Required project files are missing.")
+
+    st.markdown(
+        """
+        Please run the following project steps before
+        starting the Streamlit application:
+
+        **Step 2 → Data Preprocessing**
+
+        **Step 4 → Clustering**
+
+        **Step 5 → Recommendation System**
+        """
     )
 
-    st.write(
-        "Please run Step 2, Step 4 and Step 5 first."
-    )
+    st.write("Missing files:")
 
     for file in missing_files:
         st.write(f"- `{file}`")
@@ -91,27 +96,42 @@ if missing_files:
 # 5. LOAD DATA
 # ============================================================
 
-df = pd.read_csv(cleaned_file)
+try:
 
-clustered_df = pd.read_csv(clustered_file)
+    df = pd.read_csv(cleaned_file)
 
-recommendations = pd.read_csv(
-    recommendation_file
-)
+    clustered_df = pd.read_csv(clustered_file)
+
+    recommendations = pd.read_csv(
+        recommendation_file
+    )
+
+except Exception as e:
+
+    st.error(
+        f"❌ Error while loading project files: {e}"
+    )
+
+    st.stop()
 
 
 # ============================================================
 # 6. CLEAN COLUMN NAMES
 # ============================================================
 
-df.columns = df.columns.str.strip()
+df.columns = (
+    df.columns
+    .str.strip()
+)
 
 clustered_df.columns = (
-    clustered_df.columns.str.strip()
+    clustered_df.columns
+    .str.strip()
 )
 
 recommendations.columns = (
-    recommendations.columns.str.strip()
+    recommendations.columns
+    .str.strip()
 )
 
 
@@ -129,7 +149,9 @@ required_columns = [
     "camera_rating",
     "performance_rating",
     "design_rating",
-    "display_rating"
+    "display_rating",
+    "Cluster"
+
 ]
 
 
@@ -147,21 +169,131 @@ missing_columns = [
 if missing_columns:
 
     st.error(
-        "Required columns are missing from "
-        "clustered_mobile_reviews.csv:"
+        "❌ Required columns are missing from "
+        "clustered_mobile_products.csv"
     )
 
+    st.write("Missing columns:")
+
     for column in missing_columns:
-        st.write(f"- {column}")
+
+        st.write(f"- `{column}`")
 
     st.stop()
 
 
 # ============================================================
-# 8. SIDEBAR
+# 8. REQUIRED RECOMMENDATION COLUMNS
 # ============================================================
 
-st.sidebar.title("Navigation")
+recommendation_columns = [
+
+    "Selected_Brand",
+    "Selected_Model",
+    "Recommended_Brand",
+    "Recommended_Model",
+    "Recommended_Price_USD",
+    "Recommended_Rating",
+    "Recommended_Battery",
+    "Recommended_Camera",
+    "Recommended_Performance",
+    "Similarity_Score",
+    "Recommendation_Rank"
+
+]
+
+
+missing_recommendation_columns = [
+
+    column
+
+    for column in recommendation_columns
+
+    if column not in recommendations.columns
+
+]
+
+
+if missing_recommendation_columns:
+
+    st.error(
+        "❌ Required recommendation columns are missing."
+    )
+
+    st.write("Missing columns:")
+
+    for column in missing_recommendation_columns:
+
+        st.write(f"- `{column}`")
+
+    st.stop()
+
+
+# ============================================================
+# 9. NUMERIC DATA PREPARATION
+# ============================================================
+
+numeric_columns = [
+
+    "price_usd",
+    "rating",
+    "battery_life_rating",
+    "camera_rating",
+    "performance_rating",
+    "design_rating",
+    "display_rating"
+
+]
+
+
+for column in numeric_columns:
+
+    clustered_df[column] = pd.to_numeric(
+        clustered_df[column],
+        errors="coerce"
+    )
+
+
+# Replace missing numeric values with median
+
+for column in numeric_columns:
+
+    if clustered_df[column].isna().any():
+
+        median_value = clustered_df[column].median()
+
+        clustered_df[column] = (
+            clustered_df[column]
+            .fillna(median_value)
+        )
+
+
+# ============================================================
+# 10. CREATE PRODUCT NAME
+# ============================================================
+
+clustered_df["Product_Name"] = (
+
+    clustered_df["brand"]
+    .astype(str)
+    .str.strip()
+
+    + " "
+
+    +
+
+    clustered_df["model"]
+    .astype(str)
+    .str.strip()
+
+)
+
+
+# ============================================================
+# 11. SIDEBAR NAVIGATION
+# ============================================================
+
+st.sidebar.title("📌 Navigation")
 
 page = st.sidebar.radio(
 
@@ -177,40 +309,6 @@ page = st.sidebar.radio(
 
 
 # ============================================================
-# 9. COMMON DATA PREPARATION
-# ============================================================
-
-numeric_columns = [
-
-    "price_usd",
-
-    "rating",
-
-    "battery_life_rating",
-
-    "camera_rating",
-
-    "performance_rating",
-
-    "design_rating",
-
-    "display_rating"
-
-]
-
-
-for column in numeric_columns:
-
-    clustered_df[column] = pd.to_numeric(
-
-        clustered_df[column],
-
-        errors="coerce"
-
-    )
-
-
-# ============================================================
 # PAGE 1 - DASHBOARD
 # ============================================================
 
@@ -218,23 +316,33 @@ if page == "Dashboard":
 
     st.header("📊 Project Dashboard")
 
+    st.markdown(
+        """
+        ### Project Overview
+
+        This dashboard provides an overview of the mobile
+        product dataset, product segments and recommendation
+        system.
+        """
+    )
 
     # --------------------------------------------------------
     # KPI VALUES
     # --------------------------------------------------------
 
-    total_products = len(clustered_df)
+    total_products = (
+        clustered_df["Product_Name"]
+        .nunique()
+    )
 
     total_brands = (
         clustered_df["brand"]
         .nunique()
     )
 
-    total_segments = (
-        clustered_df["Segment"]
+    total_clusters = (
+        clustered_df["Cluster"]
         .nunique()
-        if "Segment" in clustered_df.columns
-        else clustered_df["Cluster"].nunique()
     )
 
     average_rating = (
@@ -249,7 +357,7 @@ if page == "Dashboard":
     with col1:
 
         st.metric(
-            "Total Products",
+            "📱 Total Products",
             f"{total_products:,}"
         )
 
@@ -257,7 +365,7 @@ if page == "Dashboard":
     with col2:
 
         st.metric(
-            "Total Brands",
+            "🏷️ Total Brands",
             f"{total_brands:,}"
         )
 
@@ -265,15 +373,15 @@ if page == "Dashboard":
     with col3:
 
         st.metric(
-            "Product Segments",
-            f"{total_segments:,}"
+            "🎯 Product Segments",
+            f"{total_clusters:,}"
         )
 
 
     with col4:
 
         st.metric(
-            "Average Rating",
+            "⭐ Average Rating",
             f"{average_rating:.2f}"
         )
 
@@ -286,7 +394,7 @@ if page == "Dashboard":
     # --------------------------------------------------------
 
     st.subheader(
-        "Mobile Product Price Distribution"
+        "💰 Mobile Product Price Distribution"
     )
 
 
@@ -318,7 +426,7 @@ if page == "Dashboard":
     # --------------------------------------------------------
 
     st.subheader(
-        "Mobile Product Rating Distribution"
+        "⭐ Mobile Product Rating Distribution"
     )
 
 
@@ -342,6 +450,58 @@ if page == "Dashboard":
     st.plotly_chart(
 
         fig_rating,
+
+        use_container_width=True
+
+    )
+
+
+    # --------------------------------------------------------
+    # BRAND DISTRIBUTION
+    # --------------------------------------------------------
+
+    st.subheader(
+        "🏷️ Products by Brand"
+    )
+
+
+    brand_counts = (
+
+        clustered_df["brand"]
+
+        .value_counts()
+
+        .reset_index()
+
+    )
+
+
+    brand_counts.columns = [
+
+        "Brand",
+        "Product_Count"
+
+    ]
+
+
+    fig_brand = px.bar(
+
+        brand_counts,
+
+        x="Brand",
+
+        y="Product_Count",
+
+        text="Product_Count",
+
+        title="Number of Products by Brand"
+
+    )
+
+
+    st.plotly_chart(
+
+        fig_brand,
 
         use_container_width=True
 
@@ -375,17 +535,17 @@ elif page == "Product Segmentation":
 
         )
 
+
         segment_counts.columns = [
 
             "Segment",
-
             "Product_Count"
 
         ]
 
 
         st.subheader(
-            "Product Segment Distribution"
+            "📊 Product Segment Distribution"
         )
 
 
@@ -418,12 +578,30 @@ elif page == "Product Segmentation":
         )
 
 
+    else:
+
+        st.warning(
+            "Segment column is not available."
+        )
+
+
     # --------------------------------------------------------
     # PRICE VS RATING
     # --------------------------------------------------------
 
     st.subheader(
-        "Price vs Rating by Cluster"
+        "💰 Price vs Rating by Cluster"
+    )
+
+
+    color_column = (
+
+        "Segment"
+
+        if "Segment" in clustered_df.columns
+
+        else "Cluster"
+
     )
 
 
@@ -435,9 +613,7 @@ elif page == "Product Segmentation":
 
         y="rating",
 
-        color="Segment"
-        if "Segment" in clustered_df.columns
-        else "Cluster",
+        color=color_column,
 
         hover_data=[
 
@@ -451,7 +627,9 @@ elif page == "Product Segmentation":
 
             "camera_rating",
 
-            "performance_rating"
+            "performance_rating",
+
+            "battery_life_rating"
 
         ],
 
@@ -482,44 +660,8 @@ elif page == "Product Segmentation":
     # --------------------------------------------------------
 
     st.subheader(
-        "Cluster Profile"
+        "📋 Cluster Profile"
     )
-
-
-    profile_columns = [
-
-        "Cluster",
-
-        "Product_Count",
-
-        "Percentage",
-
-        "price_usd",
-
-        "rating",
-
-        "battery_life_rating",
-
-        "camera_rating",
-
-        "performance_rating",
-
-        "design_rating",
-
-        "display_rating"
-
-    ]
-
-
-    available_profile_columns = [
-
-        column
-
-        for column in profile_columns
-
-        if column in clustered_df.columns
-
-    ]
 
 
     cluster_profile = (
@@ -580,6 +722,8 @@ elif page == "Product Segmentation":
     ).round(2)
 
 
+    # Add Segment name
+
     if "Segment" in clustered_df.columns:
 
         segment_mapping = (
@@ -595,13 +739,19 @@ elif page == "Product Segmentation":
         )
 
 
-        cluster_profile = cluster_profile.merge(
+        cluster_profile = (
 
-            segment_mapping,
+            cluster_profile
 
-            on="Cluster",
+            .merge(
 
-            how="left"
+                segment_mapping,
+
+                on="Cluster",
+
+                how="left"
+
+            )
 
         )
 
@@ -636,7 +786,9 @@ elif page == "Product Segmentation":
 
         cluster_profile[display_columns],
 
-        use_container_width=True
+        use_container_width=True,
+
+        hide_index=True
 
     )
 
@@ -652,34 +804,37 @@ elif page == "Product Segmentation":
 
     for _, row in cluster_profile.iterrows():
 
-        if "Segment" in row:
+        if "Segment" in cluster_profile.columns:
 
             segment_name = row["Segment"]
 
         else:
 
             segment_name = (
+
                 f"Cluster {int(row['Cluster'])}"
+
             )
 
 
         st.markdown(
 
             f"""
-            **{segment_name}**
+            ### {segment_name}
 
-            - Average Price: ${row['price_usd']:.2f}
-            - Average Rating: {row['rating']:.2f}
-            - Average Camera Rating: {row['camera_rating']:.2f}
-            - Average Performance Rating: {row['performance_rating']:.2f}
-            - Number of Products: {int(row['Product_Count'])}
+            - **Average Price:** ${row['price_usd']:.2f}
+            - **Average Rating:** {row['rating']:.2f}
+            - **Average Camera Rating:** {row['camera_rating']:.2f}
+            - **Average Performance Rating:** {row['performance_rating']:.2f}
+            - **Average Battery Rating:** {row['battery_life_rating']:.2f}
+            - **Number of Products:** {int(row['Product_Count'])}
             """
 
         )
 
 
 # ============================================================
-# PAGE 3 - RECOMMENDATION SYSTEM
+# PAGE 3 - RECOMMENDATIONS
 # ============================================================
 
 elif page == "Recommendations":
@@ -690,34 +845,23 @@ elif page == "Recommendations":
 
 
     st.markdown(
-
         """
-        Select a mobile product below to find the
-        **Top 5 similar products** based on price,
-        ratings and product specifications.
+        Select a mobile product to find the
+        **Top 5 similar products** based on product
+        characteristics using **Cosine Similarity**.
         """
-
     )
 
 
     # --------------------------------------------------------
-    # CREATE PRODUCT LIST
+    # PRODUCT LIST
     # --------------------------------------------------------
-
-    clustered_df["Product_Name"] = (
-
-        clustered_df["brand"].astype(str)
-
-        + " "
-
-        + clustered_df["model"].astype(str)
-
-    )
-
 
     product_names = sorted(
 
         clustered_df["Product_Name"]
+
+        .dropna()
 
         .unique()
 
@@ -726,26 +870,41 @@ elif page == "Recommendations":
     )
 
 
+    if not product_names:
+
+        st.warning(
+            "No products are available."
+        )
+
+        st.stop()
+
+
     # --------------------------------------------------------
     # PRODUCT SELECTION
     # --------------------------------------------------------
 
     selected_product_name = st.selectbox(
 
-        "Select a Mobile Product",
+        "📱 Select a Mobile Product",
 
         product_names
 
     )
 
 
-    selected_row = clustered_df[
+    selected_row = (
 
-        clustered_df["Product_Name"]
+        clustered_df[
 
-        == selected_product_name
+            clustered_df["Product_Name"]
 
-    ].iloc[0]
+            == selected_product_name
+
+        ]
+
+        .iloc[0]
+
+    )
 
 
     selected_brand = selected_row["brand"]
@@ -758,7 +917,7 @@ elif page == "Recommendations":
     # --------------------------------------------------------
 
     st.subheader(
-        "Selected Product"
+        "📱 Selected Product"
     )
 
 
@@ -768,44 +927,32 @@ elif page == "Recommendations":
     with col1:
 
         st.metric(
-
             "Brand",
-
-            selected_brand
-
+            str(selected_brand)
         )
 
 
     with col2:
 
         st.metric(
-
             "Model",
-
-            selected_model
-
+            str(selected_model)
         )
 
 
     with col3:
 
         st.metric(
-
             "Price",
-
             f"${selected_row['price_usd']:.2f}"
-
         )
 
 
     with col4:
 
         st.metric(
-
             "Rating",
-
             f"{selected_row['rating']:.2f}"
-
         )
 
 
@@ -813,7 +960,7 @@ elif page == "Recommendations":
 
         st.info(
 
-            f"Product Segment: "
+            f"🎯 Product Segment: "
             f"**{selected_row['Segment']}**"
 
         )
@@ -824,7 +971,7 @@ elif page == "Recommendations":
     # --------------------------------------------------------
 
     st.subheader(
-        "Product Specifications"
+        "⚙️ Product Specifications"
     )
 
 
@@ -889,31 +1036,41 @@ elif page == "Recommendations":
     # FIND RECOMMENDATIONS
     # --------------------------------------------------------
 
-    selected_recommendations = recommendations[
+    selected_recommendations = (
 
-        (
+        recommendations[
 
-            recommendations[
-                "Selected_Brand"
-            ].astype(str)
+            (
 
-            == str(selected_brand)
+                recommendations[
+                    "Selected_Brand"
+                ]
 
-        )
+                .astype(str)
 
-        &
+                == str(selected_brand)
 
-        (
+            )
 
-            recommendations[
-                "Selected_Model"
-            ].astype(str)
+            &
 
-            == str(selected_model)
+            (
 
-        )
+                recommendations[
+                    "Selected_Model"
+                ]
 
-    ].copy()
+                .astype(str)
+
+                == str(selected_model)
+
+            )
+
+        ]
+
+        .copy()
+
+    )
 
 
     # --------------------------------------------------------
@@ -1005,7 +1162,7 @@ elif page == "Recommendations":
                 "Recommended Product",
 
                 "Similarity_Score":
-                "Similarity Score"
+                "Cosine Similarity"
 
             }
 
@@ -1031,16 +1188,16 @@ elif page == "Recommendations":
 
 
         # ----------------------------------------------------
-        # VALIDATION
+        # SIMILARITY VALIDATION
         # ----------------------------------------------------
 
         average_similarity = (
 
             selected_recommendations[
-
                 "Similarity_Score"
+            ]
 
-            ].mean()
+            .mean()
 
         )
 
@@ -1048,16 +1205,16 @@ elif page == "Recommendations":
         highest_similarity = (
 
             selected_recommendations[
-
                 "Similarity_Score"
+            ]
 
-            ].max()
+            .max()
 
         )
 
 
         st.subheader(
-            "Recommendation Relevance"
+            "📈 Recommendation Similarity"
         )
 
 
@@ -1090,37 +1247,37 @@ elif page == "Recommendations":
             )
 
 
+        # ----------------------------------------------------
+        # RELEVANCE MESSAGE
+        # ----------------------------------------------------
+
         if average_similarity >= 0.80:
 
             st.success(
-
                 "Recommendation Relevance: HIGH"
-
             )
 
         elif average_similarity >= 0.60:
 
             st.info(
-
                 "Recommendation Relevance: MODERATE"
-
             )
 
         else:
 
             st.warning(
-
                 "Recommendation Relevance: LOW"
-
             )
 
 
         st.caption(
 
-            "Similarity score is a feature-based "
-            "relevance indicator, not recommendation "
-            "accuracy. No ground-truth user preference "
-            "data is available in this project."
+            """
+            Similarity score is a feature-based relevance
+            indicator, not recommendation accuracy.
+            No ground-truth user preference data is available
+            in this project.
+            """
 
         )
 
@@ -1134,15 +1291,18 @@ st.sidebar.divider()
 st.sidebar.info(
 
     """
-    **Project Methodology**
+    ### 📌 Project Methodology
 
-    • Data Cleaning  
-    • EDA  
+    • Data Collection  
+    • Data Preprocessing  
+    • Exploratory Data Analysis  
     • K-Means Clustering  
     • Product Segmentation  
     • Cosine Similarity  
     • Product Recommendation  
-    • Streamlit Visualization
+    • Model Evaluation  
+    • Insights & Reporting  
+    • Streamlit Dashboard
     """
 
 )

@@ -1,38 +1,151 @@
-# Mobile Product Segmentation and Recommendation System
+# 📱 Mobile Product Segmentation and Recommendation System
 
-## 📱 Project Overview
+## 📌 Project Overview
 
-This project develops an end-to-end **Mobile Product Segmentation and Recommendation System** using Python and Machine Learning.
+The **Mobile Product Segmentation and Recommendation System** is a Machine Learning project developed using **Python, Pandas, Scikit-learn, and Streamlit**.
 
-The system analyzes mobile product prices, ratings, and specifications to:
+The project analyzes mobile product and customer review data, performs data preprocessing and exploratory data analysis, segments mobile products using **K-Means clustering**, and generates similar-product recommendations using **Cosine Similarity**.
 
-- Understand product characteristics
-- Explore product and brand-level patterns
-- Segment mobile products into four groups using **K-Means Clustering**
-- Recommend similar mobile products using **Cosine Similarity**
-- Provide interactive visualizations through **Streamlit**
-- Generate business-oriented insights and reports
+The final system provides an interactive **Streamlit dashboard** where users can explore product segments, analyze mobile-product performance, and obtain recommendations.
 
 ---
 
-## 🎯 Objectives
+## 🎯 Project Objectives
 
-1. Collect and understand mobile product review data.
-2. Clean and preprocess the dataset.
-3. Perform Exploratory Data Analysis (EDA).
-4. Segment products into four similarity-based groups.
-5. Build a similarity-based recommendation system.
-6. Develop an interactive Streamlit application.
-7. Generate insights to support data-driven decisions.
+The main objectives of this project are:
+
+* Clean and preprocess mobile review and product data.
+* Perform exploratory data analysis (EDA).
+* Engineer useful product and engagement features.
+* Analyze relationships between price, ratings, and specifications.
+* Segment mobile products into meaningful groups using K-Means.
+* Evaluate clustering quality using appropriate metrics.
+* Build a product recommendation system using Cosine Similarity.
+* Generate business and customer preference insights.
+* Develop an interactive Streamlit application.
 
 ---
 
-## 🗂️ Project Structure
+## 🗂️ Project Workflow
 
 ```text
-Mobile_Product_Project/
+Raw Mobile Review Dataset
+          ↓
+1. Data Collection
+          ↓
+2. Data Preprocessing
+          ↓
+3. Exploratory Data Analysis
+          ↓
+4. Feature Engineering & Scaling
+          ↓
+5. K-Means Clustering
+          ↓
+6. Cluster Analysis & Insights
+          ↓
+7. Recommendation System
+          ↓
+8. Streamlit Application
+          ↓
+Business Insights & Recommendations
+```
+
+---
+
+# 📊 Dataset
+
+### Dataset Name
+
+`Mobile Reviews Sentiment null.csv`
+
+### Dataset Size
+
+* **Rows:** 50,000
+* **Columns:** 22
+* **Brands:** 7
+* **Countries:** 8
+* **Rating Range:** 1.0 – 5.0
+* **Approximate Price Range:** $180 – $1,500
+
+### Main Columns
+
+| Column                 | Description              |
+| ---------------------- | ------------------------ |
+| `review_id`            | Unique review identifier |
+| `customer_name`        | Customer name            |
+| `age`                  | Customer age             |
+| `brand`                | Mobile phone brand       |
+| `model`                | Mobile model             |
+| `price_usd`            | Product price in USD     |
+| `price_local`          | Local currency price     |
+| `currency`             | Currency                 |
+| `exchange_rate_to_usd` | Exchange rate            |
+| `rating`               | Customer rating          |
+| `sentiment`            | Review sentiment         |
+| `country`              | Customer country         |
+| `language`             | Review language          |
+| `review_date`          | Review date              |
+| `verified_purchase`    | Purchase verification    |
+| `battery_life_rating`  | Battery rating           |
+| `camera_rating`        | Camera rating            |
+| `performance_rating`   | Performance rating       |
+| `design_rating`        | Design rating            |
+| `display_rating`       | Display rating           |
+| `helpful_votes`        | Helpful votes            |
+| `source`               | Review source            |
+
+---
+
+# 🛠️ Technologies Used
+
+### Programming Language
+
+* Python
+
+### Libraries
+
+* Pandas
+* NumPy
+* Matplotlib
+* Seaborn
+* Scikit-learn
+* Plotly
+* Streamlit
+* Joblib
+
+### Machine Learning
+
+* K-Means Clustering
+* StandardScaler
+* Cosine Similarity
+* Silhouette Score
+* Inertia / Elbow Method
+
+---
+
+# 📁 Project Structure
+
+```text
+Mobile_Product_Segmentation/
 │
-├── Mobile Reviews Sentiment null.csv
+├── data/
+│   ├── Mobile Reviews Sentiment null.csv
+│   └── cleaned_mobile_reviews.csv
+│
+├── recommendations/
+│   └── all_product_recommendations.csv
+│
+├── insights/
+│   ├── cluster_wise_analysis.csv
+│   ├── high_performing_products.csv
+│   ├── low_performing_products.csv
+│   ├── brand_analysis.csv
+│   └── customer_preference_patterns.csv
+│
+├── models/
+│   ├── kmeans_model.pkl
+│   ├── scaler.pkl
+│   └── clustering_features.pkl
 │
 ├── Step1_Data_Collection.py
 ├── Step2_Data_Preprocessing.py
@@ -42,79 +155,41 @@ Mobile_Product_Project/
 ├── Step6_Streamlit.py
 ├── Step7_Insights_Reporting.py
 │
-├── cleaned_mobile_reviews.csv
-├── clustered_mobile_reviews.csv
-├── cluster_profile_summary.csv
-│
-├── recommendations/
-│   └── all_product_recommendations.csv
-│
-└── insights/
-    ├── cluster_wise_analysis.csv
-    ├── high_performing_products.csv
-    ├── low_performing_products.csv
-    ├── price_range_performance.csv
-    ├── customer_preference_patterns.csv
-    ├── brand_performance_analysis.csv
-    ├── price_vs_performance.png
-    └── mobile_product_insights_report.txt
+├── requirements.txt
+└── README.md
 ```
+
+> File names may be adjusted according to the final project folder structure.
 
 ---
 
-## 🔄 Project Workflow
+# 🔄 Project Modules
 
-```text
-Raw Dataset
-     ↓
-Data Collection
-     ↓
-Data Cleaning & Preprocessing
-     ↓
-Exploratory Data Analysis
-     ↓
-K-Means Product Segmentation
-     ↓
-Cosine Similarity Recommendation
-     ↓
-Streamlit Application
-     ↓
-Insights & Reporting
-```
+## 1️⃣ Data Collection
 
----
-
-# 1. Data Collection
-
-### File
+**File:**
 
 ```text
 Step1_Data_Collection.py
 ```
 
-The original CSV dataset is loaded and inspected.
+This module:
 
-The data collection stage checks:
+* Loads the raw CSV dataset.
+* Displays dataset shape.
+* Displays column names.
+* Checks data types.
+* Provides an initial understanding of the dataset.
 
-- Dataset shape
-- Column names
-- Data types
-- Missing values
-- Duplicate records
-- Statistical summary
-- First few records
+### Output
 
-### Input
-
-```text
-Mobile Reviews Sentiment null.csv
-```
+Initial dataset information.
 
 ---
 
-# 2. Data Cleaning & Preprocessing
+# 2️⃣ Data Preprocessing
 
-### File
+**File:**
 
 ```text
 Step2_Data_Preprocessing.py
@@ -122,19 +197,26 @@ Step2_Data_Preprocessing.py
 
 The preprocessing stage performs:
 
-- Column name cleaning
-- Numeric data conversion
-- Missing value handling
-- Median imputation for numerical columns
-- Mode/Unknown handling for categorical values
-- Duplicate removal
-- Infinite value handling
+* Missing-value handling
+* Duplicate checking
+* Data-type conversion
+* Numerical feature preparation
+* Categorical encoding
+* Feature engineering
+* Feature scaling
 
-Important project design decision:
+### Important Features
 
-> **No one-hot encoding and no feature scaling are performed during preprocessing.**
+The project uses features related to:
 
-The original `brand` and `model` information is preserved because they are required for product identification and downstream analysis.
+* Price
+* Customer rating
+* Battery life
+* Camera
+* Performance
+* Design
+* Display
+* Customer engagement
 
 ### Output
 
@@ -144,141 +226,171 @@ cleaned_mobile_reviews.csv
 
 ---
 
-# 3. Exploratory Data Analysis
+# 3️⃣ Exploratory Data Analysis
 
-### File
+**File:**
 
 ```text
 Step3_EDA.py
 ```
 
-EDA is performed using the cleaned dataset.
+EDA is performed to understand the underlying patterns in the dataset.
 
-The analysis includes:
+### Analysis Performed
 
-- Product distribution by brand
-- Top-rated products
-- Low-rated products
-- Price analysis
-- Price vs rating analysis
-- Price vs specification analysis
-- Rating distribution
-- Correlation analysis
-- Brand-wise comparison
-- Specification-wise comparison
+* Brand distribution
+* Country distribution
+* Top-rated products
+* Lowest-rated products
+* Rating distribution
+* Price vs rating
+* Price vs performance
+* Price vs camera rating
+* Price vs battery rating
+* Brand-wise average rating
+* Brand-wise average price
+* Specification comparison
+* Correlation analysis
 
-EDA uses the original business-scale values.
-
-Scaling is not required during this stage.
-
-### Outputs
+### Output
 
 ```text
 eda_specification_summary.csv
 eda_brand_summary.csv
 ```
 
+EDA helps determine which variables are useful for subsequent machine-learning analysis.
+
 ---
 
-# 4. K-Means Product Segmentation
+# 4️⃣ K-Means Clustering
 
-### File
+**File:**
 
 ```text
 Step4_Clustering.py
 ```
 
-K-Means clustering is used to group products with similar characteristics.
+K-Means clustering is used to segment mobile products into groups with similar characteristics.
 
-### Features Used
+### Clustering Features
 
-- Price
-- Rating
-- Battery life rating
-- Camera rating
-- Performance rating
-- Design rating
-- Display rating
-
-### Machine Learning Process
+The major features include:
 
 ```text
-Product Features
-       ↓
-Missing Value Handling
-       ↓
-StandardScaler
-       ↓
-Elbow Method
-       ↓
-K-Means Clustering
-       ↓
-4 Clusters
-       ↓
-Product Segments
+price_usd
+rating
+battery_life_rating
+camera_rating
+performance_rating
+design_rating
+display_rating
 ```
+
+Categorical variables such as brand/model are appropriately transformed before machine-learning processing.
+
+### Preprocessing
+
+Numerical features are standardized using:
+
+```text
+StandardScaler
+```
+
+### Number of Clusters
 
 The project uses:
 
 ```text
-Number of Clusters = 4
+K = 4
 ```
 
-The clusters are interpreted using average price as:
+### Cluster Evaluation
 
-1. Budget
-2. Mid-Range
-3. Upper Mid-Range
-4. Premium
+The clustering process considers:
 
-The **Elbow Method** and **Silhouette Score** are used to evaluate the clustering structure.
+* Inertia
+* Elbow Method
+* Silhouette Score
 
-### Outputs
+### Output
 
 ```text
 clustered_mobile_reviews.csv
-cluster_profile_summary.csv
 ```
 
 ---
 
-# 5. Recommendation System
+# 🔵 Product Segmentation
 
-### File
+The four clusters can be interpreted based on their feature profiles.
+
+Typical interpretations include:
+
+### Cluster 0 — Value / Budget Segment
+
+Products with relatively lower prices and suitable specifications.
+
+### Cluster 1 — Balanced Segment
+
+Products offering a balance between price and overall specifications.
+
+### Cluster 2 — Performance Segment
+
+Products characterized by stronger performance-related specifications.
+
+### Cluster 3 — Premium Segment
+
+Higher-priced products with stronger overall specification profiles.
+
+> Cluster numbers themselves do not inherently mean "budget", "premium", etc. The business meaning is assigned after analyzing each cluster's characteristics.
+
+---
+
+# 5️⃣ Recommendation System
+
+**File:**
 
 ```text
 Step5_Recommendation.py
 ```
 
-A **content-based similarity recommendation system** is implemented.
+The recommendation module uses **Cosine Similarity** to identify products with similar feature profiles.
 
-The system uses:
+### Product Profile
 
-- Price
-- Rating
-- Battery life
-- Camera
-- Performance
-- Design
-- Display
+Recommendations consider characteristics such as:
+
+```text
+price_usd
+rating
+battery_life_rating
+camera_rating
+performance_rating
+design_rating
+display_rating
+```
+
+Products are organized using:
+
+```text
+brand
+model
+```
 
 ### Recommendation Process
 
 ```text
-Product Profiles
+Selected Product
        ↓
-Feature Standardization
+Product Feature Vector
        ↓
 Cosine Similarity
        ↓
-Similarity Scores
+Similarity Ranking
        ↓
-Ranking
-       ↓
-Top 5 Similar Products
+Top Similar Products
 ```
-
-Recommendations are generated for every unique product.
 
 ### Output
 
@@ -286,328 +398,387 @@ Recommendations are generated for every unique product.
 recommendations/all_product_recommendations.csv
 ```
 
-The recommendation output contains:
-
-- Selected product
-- Recommended product
-- Recommendation rank
-- Recommended price
-- Recommended rating
-- Recommended specifications
-- Similarity score
-
-### Validation
-
-Recommendation relevance is assessed using similarity scores.
-
-The system categorizes overall relevance as:
-
-- **HIGH**
-- **MODERATE**
-- **LOW**
-
-> Similarity score is used as a relevance indicator. It is not recommendation accuracy because the dataset does not contain ground-truth user recommendation outcomes.
-
 ---
 
-# 6. Streamlit Application
+# 6️⃣ Streamlit Application
 
-### File
+**File:**
 
 ```text
 Step6_Streamlit.py
 ```
 
-An interactive web application is developed using **Streamlit**.
+The Streamlit application provides an interactive interface for exploring the project results.
 
-The application contains three major sections.
+### Main Application Features
 
-### Dashboard
+* Dashboard
+* Product overview
+* Cluster analysis
+* Interactive filtering
+* Product recommendations
+* EDA visualizations
+* Business insights
+* KPI cards
+* Interactive charts
 
-Displays:
+### Application Flow
 
-- Total products
-- Number of brands
-- Number of segments
-- Average rating
-- Price distribution
-- Rating distribution
-
-### Product Segmentation
-
-Displays:
-
-- Segment distribution
-- Cluster information
-- Price vs rating visualization
-- Cluster profiles
-- Business interpretation
-
-### Recommendations
-
-Users can select a mobile product and view:
-
-- Selected product information
-- Price
-- Rating
-- Specifications
-- Product segment
-- Top 5 similar products
-- Similarity scores
-- Similarity visualization
-- Relevance interpretation
+```text
+User
+ ↓
+Streamlit Dashboard
+ ↓
+Select / Filter Product
+ ↓
+View Product Information
+ ↓
+Explore Cluster
+ ↓
+Generate Similar Product Recommendations
+```
 
 ---
 
-## ▶️ Running the Streamlit Application
+# 7️⃣ Insights & Reporting
 
-Install the required packages:
-
-```bash
-pip install pandas numpy scikit-learn matplotlib seaborn plotly streamlit
-```
-
-Run the application:
-
-```bash
-streamlit run Step6_Streamlit.py
-```
-
-The Streamlit application will open in the browser.
-
----
-
-# 7. Insights & Reporting
-
-### File
+**File:**
 
 ```text
 Step7_Insights_Reporting.py
 ```
 
-This stage converts analytical results into business-oriented insights.
+This module generates business-oriented insights from the clustered dataset.
 
-The analysis includes:
+### Analysis Includes
 
-### Product Segmentation
+* Cluster-wise analysis
+* High-performing products
+* Low-performing products
+* Brand analysis
+* Customer preference patterns
+* Price vs performance analysis
 
-- Cluster size
-- Segment percentage
-- Average price
-- Average rating
-- Average performance
-
-### High-Performing Products
-
-The Top 10 products are identified using an overall performance score.
-
-### Low-Performing Products
-
-The Bottom 10 products are identified using the same performance measure.
-
-### Price vs Performance
-
-The relationship between price and overall product performance is analyzed.
-
-### Customer Preference Patterns
-
-Patterns are inferred from the average ratings of measured product attributes.
-
-### Brand Analysis
-
-Brands are compared using:
-
-- Product count
-- Average price
-- Average rating
-- Average performance
-
-### Output Folder
+### Main Outputs
 
 ```text
 insights/
 ```
 
-The folder contains CSV reports, a visualization, and a text-based insights report.
+Example files:
+
+```text
+cluster_wise_analysis.csv
+high_performing_products.csv
+low_performing_products.csv
+brand_analysis.csv
+customer_preference_patterns.csv
+```
 
 ---
 
-# 🛠️ Technologies Used
+# 📈 Machine Learning Methodology
 
-| Technology | Purpose |
-|---|---|
-| Python | Main programming language |
-| Pandas | Data manipulation |
-| NumPy | Numerical operations |
-| Scikit-learn | Machine Learning |
-| Matplotlib | Visualization |
-| Seaborn | Statistical visualization |
-| Plotly | Interactive visualization |
-| Streamlit | Web application |
+## K-Means Clustering
 
----
+K-Means divides products into **K groups** based on similarity.
 
-# 🤖 Machine Learning Techniques
+For this project:
 
-### K-Means Clustering
+```text
+K = 4
+```
 
-Used for:
+The algorithm attempts to minimize the distance between data points and their assigned cluster centers.
 
-> **Mobile product segmentation**
+### Simple Explanation
 
-Products are grouped based on similarity in price, ratings, and specifications.
-
-### Cosine Similarity
-
-Used for:
-
-> **Product recommendation**
-
-Products with similar feature vectors receive higher similarity scores.
-
-### StandardScaler
-
-Used before:
-
-- K-Means clustering
-- Cosine similarity
-
-Scaling is intentionally performed only in the Machine Learning stages.
+> "Products having similar price, ratings and specifications are grouped together."
 
 ---
 
-# 📊 Key Project Outputs
+# 📐 StandardScaler
 
-The project produces:
+StandardScaler is used before clustering so that variables with different numerical ranges do not dominate the distance calculation.
 
-- Cleaned dataset
-- Clustered product dataset
-- Cluster profile
-- Product recommendations
-- High-performing products
-- Low-performing products
-- Price-range analysis
-- Brand performance analysis
-- Customer preference patterns
-- Price vs performance visualization
-- Business insights report
-- Interactive Streamlit dashboard
+Example:
+
+```text
+Price → hundreds/thousands
+Rating → 1–5
+```
+
+Scaling converts the features into comparable standardized values.
 
 ---
 
-# 💡 Business Value
+# 📊 Silhouette Score
 
-This system can support:
+Silhouette Score evaluates how well the observations fit within their assigned clusters.
 
-- Product portfolio analysis
-- Market segmentation
-- Product comparison
-- Customer product discovery
-- Competitive analysis
-- Value-for-money analysis
-- Data-driven product decisions
+### Simple Definition
 
-Businesses can use product segments to understand different market groups and use similarity-based recommendations to help users discover alternative products.
+> A higher silhouette score generally indicates better-separated and more cohesive clusters.
 
 ---
 
-# ⚠️ Project Limitation
+# 📏 Cosine Similarity
 
-The dataset contains product-level information and ratings.
+Cosine Similarity is used in the recommendation system.
 
-It does **not** contain individual customer purchase history or explicit user preference profiles.
+### Simple Definition
 
-Therefore:
+> Cosine Similarity measures how similar two product feature vectors are based on their direction.
 
-- Customer preference patterns are inferred from product ratings and specifications.
-- Recommendations are based on product-feature similarity.
-- Recommendation validation uses similarity/relevance measures rather than actual user-click or purchase accuracy.
+A value closer to:
+
+```text
+1 → highly similar
+0 → less similar
+```
+
+---
+
+# 💡 Business Insights
+
+The system can support several business decisions.
+
+### Customer Perspective
+
+Customers can discover alternatives similar to a selected mobile product.
+
+### Product Perspective
+
+Businesses can identify different product segments.
+
+### Marketing Perspective
+
+Brand and specification preferences can support targeted marketing.
+
+### Portfolio Perspective
+
+High-performing and low-performing products can be analyzed separately.
 
 ---
 
 # 🚀 Future Enhancements
 
-Future versions can include:
+Possible improvements include:
 
-1. Review-text sentiment analysis.
-2. User-specific recommendation history.
-3. Hybrid recommendation systems.
-4. Real-time product price updates.
-5. Price prediction.
-6. Advanced recommendation algorithms.
-7. Online deployment of the Streamlit application.
-8. User login and personalized recommendations.
-
----
-
-# ✅ Conclusion
-
-The project successfully implements an end-to-end data science workflow for mobile product analysis.
-
-It combines:
-
-```text
-Data Collection
-      +
-Data Preprocessing
-      +
-EDA
-      +
-K-Means Clustering
-      +
-Cosine Similarity
-      +
-Streamlit
-      +
-Insights
-```
-
-The final system provides both **product segmentation** and **similar-product recommendations**, while presenting the results through an interactive application and structured analytical reports.
+1. Hybrid recommendation system.
+2. User-personalized recommendations.
+3. Sentiment-aware recommendations.
+4. Deep-learning-based recommendation models.
+5. Real-time data updates.
+6. Cloud deployment.
+7. Model monitoring.
+8. Additional clustering algorithms.
+9. Customer-level segmentation.
+10. Mobile/web deployment.
 
 ---
 
-## 👨‍💻 Project Type
+# ▶️ How to Run the Project
 
-**End-to-End Data Science & Machine Learning Project**
-
-**Domain:** Mobile Products / E-Commerce Analytics
-
-**Tech Stack:** Python, Pandas, NumPy, Scikit-learn, Matplotlib, Seaborn, Plotly, Streamlit
-
-**Machine Learning:** K-Means Clustering, Cosine Similarity
-
----
-
-## 📌 Execution Order
-
-Run the files in the following order:
-
-```text
-1. Step1_Data_Collection.py
-2. Step2_Data_Preprocessing.py
-3. Step3_EDA.py
-4. Step4_Clustering.py
-5. Step5_Recommendation.py
-6. Step6_Streamlit.py
-7. Step7_Insights_Reporting.py
-```
-
-For the Streamlit application:
+## Step 1 — Create Virtual Environment
 
 ```bash
-streamlit run Step6_Streamlit.py
+python -m venv .venv
 ```
 
-For insights and reporting:
+### Windows
+
+```bash
+.venv\Scripts\activate
+```
+
+---
+
+## Step 2 — Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+If `requirements.txt` is not available:
+
+```bash
+pip install pandas numpy matplotlib seaborn scikit-learn streamlit plotly openpyxl joblib
+```
+
+---
+
+# ▶️ Run the Project
+
+Run the scripts in the following order:
+
+### 1. Data Collection
+
+```bash
+python Step1_Data_Collection.py
+```
+
+### 2. Preprocessing
+
+```bash
+python Step2_Data_Preprocessing.py
+```
+
+### 3. EDA
+
+```bash
+python Step3_EDA.py
+```
+
+### 4. Clustering
+
+```bash
+python Step4_Clustering.py
+```
+
+### 5. Recommendation System
+
+```bash
+python Step5_Recommendation.py
+```
+
+### 6. Generate Insights
 
 ```bash
 python Step7_Insights_Reporting.py
 ```
 
+### 7. Launch Streamlit
+
+```bash
+streamlit run Step6_Streamlit.py
+```
+
 ---
 
-## 📄 Project Status
+# 📦 Expected Outputs
 
-**Status: Completed**
+After executing the complete pipeline, the project should generate outputs such as:
 
-The project covers the complete workflow from raw data collection to machine learning, recommendation, interactive visualization, and business insights.
+```text
+cleaned_mobile_reviews.csv
+clustered_mobile_reviews.csv
+recommendations/all_product_recommendations.csv
+insights/cluster_wise_analysis.csv
+insights/high_performing_products.csv
+insights/low_performing_products.csv
+insights/brand_analysis.csv
+```
+
+Model files may include:
+
+```text
+models/kmeans_model.pkl
+models/scaler.pkl
+models/clustering_features.pkl
+```
+
+---
+
+# ⚠️ Important Execution Order
+
+The scripts depend on outputs created by earlier stages.
+
+Therefore, use:
+
+```text
+Step 1
+  ↓
+Step 2
+  ↓
+Step 3
+  ↓
+Step 4
+  ↓
+Step 5
+  ↓
+Step 7
+  ↓
+Step 6 / Streamlit
+```
+
+The Streamlit application should use the **final generated files from the same project run** to avoid model/data mismatch.
+
+---
+
+# 🧪 Project Validation Checklist
+
+Before final submission, verify:
+
+* [ ] Raw dataset loads successfully.
+* [ ] Missing values are handled.
+* [ ] Duplicate records are checked.
+* [ ] Cleaned dataset is generated.
+* [ ] EDA runs without errors.
+* [ ] Required clustering features exist.
+* [ ] StandardScaler is fitted correctly.
+* [ ] K-Means uses 4 clusters.
+* [ ] Silhouette score is calculated.
+* [ ] Clustered dataset is generated.
+* [ ] Recommendation file is generated.
+* [ ] Recommendation results are sensible.
+* [ ] Step 7 generates insight files.
+* [ ] Streamlit loads the same final outputs.
+* [ ] All required Python packages are installed.
+
+---
+
+# 🏆 Final Outcome
+
+The completed system provides an end-to-end Machine Learning solution:
+
+```text
+DATA
+ ↓
+PREPROCESSING
+ ↓
+EDA
+ ↓
+FEATURE ENGINEERING
+ ↓
+K-MEANS CLUSTERING
+ ↓
+PRODUCT SEGMENTATION
+ ↓
+COSINE-SIMILARITY RECOMMENDATION
+ ↓
+BUSINESS INSIGHTS
+ ↓
+STREAMLIT DASHBOARD
+```
+
+The project demonstrates practical knowledge of:
+
+**Python + Data Cleaning + EDA + Feature Engineering + Unsupervised Learning + Clustering + Similarity-Based Recommendation + Data Visualization + Streamlit**
+
+---
+
+## 👨‍💻 Project Category
+
+**Machine Learning / Data Science**
+
+### Key Concepts Demonstrated
+
+* Data preprocessing
+* Exploratory Data Analysis
+* Feature engineering
+* Feature scaling
+* Unsupervised Machine Learning
+* K-Means clustering
+* Cluster evaluation
+* Cosine similarity
+* Recommendation systems
+* Data visualization
+* Interactive dashboards
+* Business insights
+
+---
+
+## ⭐ Project Summary
+
+> **The Mobile Product Segmentation and Recommendation System transforms raw mobile review data into meaningful product segments and similar-product recommendations using Machine Learning. The system combines data preprocessing, exploratory analysis, K-Means clustering, Cosine Similarity, and Streamlit visualization to provide an end-to-end data-driven decision-support solution.**

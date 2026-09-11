@@ -1,6 +1,5 @@
 # ============================================================
-# FILE: Step3_EDA.py
-# PROJECT: Mobile Product Segmentation and Recommendation System
+# Step3_EDA.py
 # ============================================================
 
 import os

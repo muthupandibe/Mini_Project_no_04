@@ -1,8 +1,8 @@
 # ============================================================
-# FILE: Step1_Data_Collection.py
-# PROJECT: Mobile Product Segmentation and Recommendation System
+# Step1_Data_Collection.py
 # ============================================================
 
+import os
 import pandas as pd
 
 
@@ -12,33 +12,36 @@ import pandas as pd
 
 file_path = "Mobile Reviews Sentiment null.csv"
 
-df = pd.read_csv(file_path)
-
-
-# ============================================================
-# 2. DISPLAY BASIC INFORMATION
-# ============================================================
-
 print("\n" + "=" * 60)
 print("MOBILE REVIEWS DATA COLLECTION")
 print("=" * 60)
+
+# Check whether file exists
+if not os.path.exists(file_path):
+    print(f"\nERROR: Dataset file not found!")
+    print(f"Expected file: {file_path}")
+    raise FileNotFoundError(file_path)
+
+# Load dataset
+df = pd.read_csv(file_path, low_memory=False)
 
 print("\nDataset loaded successfully!")
 
 
 # ============================================================
-# 3. DATASET SHAPE
+# 2. DATASET SHAPE
 # ============================================================
 
-print("\nDataset Shape:")
-print(df.shape)
+print("\n" + "=" * 60)
+print("DATASET SHAPE")
+print("=" * 60)
 
 print(f"Number of Rows    : {df.shape[0]}")
 print(f"Number of Columns : {df.shape[1]}")
 
 
 # ============================================================
-# 4. COLUMN NAMES
+# 3. COLUMN NAMES
 # ============================================================
 
 print("\n" + "=" * 60)
@@ -50,7 +53,7 @@ for i, column in enumerate(df.columns, start=1):
 
 
 # ============================================================
-# 5. DATA TYPES
+# 4. DATA TYPES
 # ============================================================
 
 print("\n" + "=" * 60)
@@ -61,7 +64,7 @@ print(df.dtypes)
 
 
 # ============================================================
-# 6. DATASET INFORMATION
+# 5. DATASET INFORMATION
 # ============================================================
 
 print("\n" + "=" * 60)
@@ -72,7 +75,7 @@ df.info()
 
 
 # ============================================================
-# 7. FIRST 5 RECORDS
+# 6. FIRST 5 RECORDS
 # ============================================================
 
 print("\n" + "=" * 60)
@@ -83,7 +86,7 @@ print(df.head())
 
 
 # ============================================================
-# 8. MISSING VALUES
+# 7. MISSING VALUES
 # ============================================================
 
 print("\n" + "=" * 60)
@@ -94,9 +97,13 @@ missing_values = df.isnull().sum()
 
 print(missing_values)
 
+total_missing = missing_values.sum()
+
+print(f"\nTotal Missing Values: {total_missing}")
+
 
 # ============================================================
-# 9. DUPLICATE RECORDS
+# 8. DUPLICATE RECORDS
 # ============================================================
 
 print("\n" + "=" * 60)
@@ -105,11 +112,15 @@ print("=" * 60)
 
 duplicate_count = df.duplicated().sum()
 
-print("Number of duplicate records:", duplicate_count)
+print(f"Number of Duplicate Records: {duplicate_count}")
+
+if len(df) > 0:
+    duplicate_percentage = (duplicate_count / len(df)) * 100
+    print(f"Duplicate Percentage       : {duplicate_percentage:.2f}%")
 
 
 # ============================================================
-# 10. BASIC STATISTICAL SUMMARY
+# 9. BASIC STATISTICAL SUMMARY
 # ============================================================
 
 print("\n" + "=" * 60)
@@ -120,9 +131,26 @@ print(df.describe(include="all").T)
 
 
 # ============================================================
-# COMPLETION
+# 10. UNIQUE VALUES
 # ============================================================
+
+print("\n" + "=" * 60)
+print("UNIQUE VALUES")
+print("=" * 60)
+
+print(df.nunique().sort_values(ascending=False))
+
+
+# ============================================================
+# 11. SAVE RAW DATASET COPY
+# ============================================================
+
+output_file = "collected_mobile_reviews.csv"
+
+df.to_csv(output_file, index=False)
 
 print("\n" + "=" * 60)
 print("DATA COLLECTION COMPLETED SUCCESSFULLY")
 print("=" * 60)
+
+print(f"\nRaw dataset saved as: {output_file}")

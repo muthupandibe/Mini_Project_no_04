@@ -14,8 +14,6 @@ import seaborn as sns
 
 cleaned_file = "cleaned_mobile_reviews.csv"
 
-# IMPORTANT:
-# Step4 corrected version creates this file
 clustered_file = "clustered_mobile_products.csv"
 
 output_folder = "insights"
@@ -60,11 +58,13 @@ clustered_df = pd.read_csv(
 
 
 df.columns = (
-    df.columns.str.strip()
+    df.columns
+    .str.strip()
 )
 
 clustered_df.columns = (
-    clustered_df.columns.str.strip()
+    clustered_df.columns
+    .str.strip()
 )
 
 
@@ -92,15 +92,21 @@ required_columns = [
 
     "brand",
     "model",
+
     "price_usd",
     "rating",
+
     "battery_life_rating",
     "camera_rating",
     "performance_rating",
     "design_rating",
     "display_rating",
+
+    "engagement_score",
+
     "Cluster",
     "Segment"
+
 ]
 
 
@@ -129,6 +135,9 @@ if missing_columns:
 
         )
 
+        + "\n\nPlease run Step2_Data_Preprocessing.py "
+          "and Step4_Clustering.py again."
+
     )
 
 
@@ -140,21 +149,16 @@ numeric_columns = [
 
     "price_usd",
     "rating",
+
     "battery_life_rating",
     "camera_rating",
     "performance_rating",
     "design_rating",
-    "display_rating"
+    "display_rating",
+
+    "engagement_score"
 
 ]
-
-
-# Add engagement score if available
-if "engagement_score" in clustered_df.columns:
-
-    numeric_columns.append(
-        "engagement_score"
-    )
 
 
 # ============================================================
@@ -209,8 +213,10 @@ print(
 for column in numeric_columns:
 
     median_value = (
+
         clustered_df[column]
         .median()
+
     )
 
 
@@ -222,7 +228,6 @@ for column in numeric_columns:
     clustered_df[column] = (
 
         clustered_df[column]
-
         .fillna(median_value)
 
     )
@@ -234,6 +239,49 @@ print(
     clustered_df[numeric_columns]
     .isnull()
     .sum()
+)
+
+
+# ============================================================
+# 9. VERIFY CLUSTER COUNT
+# ============================================================
+
+print("\n" + "=" * 75)
+print("CLUSTER VALIDATION")
+print("=" * 75)
+
+
+number_of_clusters = (
+
+    clustered_df["Cluster"]
+    .nunique()
+
+)
+
+
+print(
+    "\nNumber of clusters:",
+    number_of_clusters
+)
+
+
+if number_of_clusters != 3:
+
+    raise ValueError(
+
+        "\nERROR: Expected exactly 3 clusters "
+        "because the elbow point is K=3.\n\n"
+
+        f"Detected clusters: {number_of_clusters}\n\n"
+
+        "Please rerun Step4_Clustering.py with "
+        "NUMBER_OF_CLUSTERS = 3."
+
+    )
+
+
+print(
+    "K-Means cluster validation passed."
 )
 
 
@@ -290,9 +338,13 @@ cluster_profile = (
     cluster_profile
 
     .merge(
+
         cluster_counts,
+
         on="Cluster",
+
         how="left"
+
     )
 
 )
@@ -331,9 +383,13 @@ cluster_profile = (
     cluster_profile
 
     .merge(
+
         segment_mapping,
+
         on="Cluster",
+
         how="left"
+
     )
 
 )
@@ -385,10 +441,15 @@ print("=" * 75)
 performance_columns = [
 
     "rating",
+
     "battery_life_rating",
+
     "camera_rating",
+
     "performance_rating",
+
     "design_rating",
+
     "display_rating"
 
 ]
@@ -426,11 +487,14 @@ high_performing_display = high_performing[
 
         "brand",
         "model",
+        "Segment",
         "price_usd",
         "rating",
         "camera_rating",
         "performance_rating",
         "battery_life_rating",
+        "design_rating",
+        "display_rating",
         "Overall_Performance_Score"
 
     ]
@@ -441,7 +505,6 @@ high_performing_display = high_performing[
 high_performing_display = (
 
     high_performing_display
-
     .round(2)
 
 )
@@ -512,11 +575,14 @@ low_performing_display = low_performing[
 
         "brand",
         "model",
+        "Segment",
         "price_usd",
         "rating",
         "camera_rating",
         "performance_rating",
         "battery_life_rating",
+        "design_rating",
+        "display_rating",
         "Overall_Performance_Score"
 
     ]
@@ -527,7 +593,6 @@ low_performing_display = low_performing[
 low_performing_display = (
 
     low_performing_display
-
     .round(2)
 
 )
@@ -582,6 +647,7 @@ price_performance_correlation = (
         [
             "price_usd",
             "Overall_Performance_Score"
+
         ]
 
     ]
@@ -612,36 +678,46 @@ print(
 if price_performance_correlation >= 0.70:
 
     price_message = (
+
         "There is a strong positive relationship "
         "between price and overall performance."
+
     )
 
 elif price_performance_correlation >= 0.30:
 
     price_message = (
+
         "There is a moderate positive relationship "
         "between price and overall performance."
+
     )
 
 elif price_performance_correlation > -0.30:
 
     price_message = (
+
         "There is a weak relationship between "
         "price and overall performance."
+
     )
 
 elif price_performance_correlation > -0.70:
 
     price_message = (
+
         "There is a moderate negative relationship "
         "between price and overall performance."
+
     )
 
 else:
 
     price_message = (
+
         "There is a strong negative relationship "
         "between price and overall performance."
+
     )
 
 
@@ -715,12 +791,18 @@ plt.savefig(
 )
 
 
-plt.show()
+plt.close()
 
 
 # ============================================================
 # PRICE RANGE ANALYSIS
 # ============================================================
+
+# NOTE:
+# These are price bands for analysis.
+# They are NOT the K-Means segments.
+# K-Means has exactly 3 segments:
+# Budget, Mid-Range and Premium.
 
 clustered_df["Price_Range"] = pd.cut(
 
@@ -729,7 +811,6 @@ clustered_df["Price_Range"] = pd.cut(
     bins=[
 
         -float("inf"),
-        200,
         400,
         700,
         float("inf")
@@ -738,10 +819,9 @@ clustered_df["Price_Range"] = pd.cut(
 
     labels=[
 
-        "Budget",
-        "Mid-Range",
-        "Upper Mid-Range",
-        "Premium"
+        "Budget Price Range",
+        "Mid-Range Price Range",
+        "Premium Price Range"
 
     ],
 
@@ -818,10 +898,15 @@ print("=" * 75)
 preference_features = [
 
     "rating",
+
     "battery_life_rating",
+
     "camera_rating",
+
     "performance_rating",
+
     "design_rating",
+
     "display_rating"
 
 ]
@@ -985,6 +1070,13 @@ brand_analysis = (
             "Overall_Performance_Score",
             "mean"
 
+        ),
+
+        Average_Engagement=(
+
+            "engagement_score",
+            "mean"
+
         )
 
     )
@@ -1076,13 +1168,9 @@ largest_segment = (
 insight_1 = (
 
     f"The largest product segment is "
-
     f"{largest_segment}, containing "
-
     f"{int(largest_cluster['Product_Count'])} "
-
     f"products "
-
     f"({largest_cluster['Percentage']:.2f}% "
     f"of the product dataset)."
 
@@ -1116,15 +1204,10 @@ best_product = (
 insight_2 = (
 
     f"The highest-performing product in the "
-
     f"analysis is "
-
     f"{best_product['brand']} "
-
     f"{best_product['model']} "
-
     f"with an overall performance score of "
-
     f"{best_product['Overall_Performance_Score']:.2f}."
 
 )
@@ -1157,13 +1240,9 @@ worst_product = (
 insight_3 = (
 
     f"The lowest-performing product is "
-
     f"{worst_product['brand']} "
-
     f"{worst_product['model']} "
-
     f"with an overall performance score of "
-
     f"{worst_product['Overall_Performance_Score']:.2f}."
 
 )
@@ -1211,11 +1290,8 @@ top_preference = (
 insight_5 = (
 
     f"Among the measured product attributes, "
-
     f"{top_preference['Feature']} has the highest "
-
     f"average rating of "
-
     f"{top_preference['Average_Rating']:.2f}."
 
 )
@@ -1257,11 +1333,8 @@ best_brand = (
 insight_6 = (
 
     f"{best_brand_name} has the highest average "
-
     f"overall performance score among the brands "
-
     f"in the dataset, at "
-
     f"{best_brand['Average_Performance']:.2f}."
 
 )
@@ -1289,7 +1362,7 @@ print("=" * 75)
 
 decision_recommendations = [
 
-    "Use product segmentation to identify Budget, Mid-Range, Upper Mid-Range and Premium market groups.",
+    "Use the three K-Means segments to identify Budget, Mid-Range and Premium product groups.",
 
     "Prioritize high-performing product attributes when evaluating existing or new mobile products.",
 
@@ -1299,7 +1372,7 @@ decision_recommendations = [
 
     "Use brand-level performance comparisons to support competitive and product portfolio analysis.",
 
-    "Use the recommendation system to help customers discover products with similar characteristics."
+    "Use the cosine-similarity recommendation system to help customers discover products with similar characteristics."
 
 ]
 
@@ -1366,6 +1439,26 @@ with open(
     )
 
 
+    file.write(
+        "Clustering Method: K-Means\n"
+    )
+
+
+    file.write(
+        "Optimal Number of Clusters: 3\n"
+    )
+
+
+    file.write(
+        "Elbow Point: K=3\n"
+    )
+
+
+    file.write(
+        "Segments: Budget, Mid-Range, Premium\n\n"
+    )
+
+
     for insight in insights:
 
         file.write(
@@ -1413,16 +1506,30 @@ with open(
     )
 
 
-    if "Segment" in clustered_df.columns:
+    file.write(
+        "Optimal Clusters: 3\n"
+    )
 
-        number_of_segments = (
-            clustered_df["Segment"]
-            .nunique()
-        )
+
+    file.write(
+        "Recommendation Method: Cosine Similarity\n"
+    )
+
+
+    file.write(
+        "Recommendation Count: Top 5 per product\n"
+    )
+
+
+    file.write(
+        "\nClustering Features:\n"
+    )
+
+
+    for feature in numeric_columns:
 
         file.write(
-            f"Number of Segments: "
-            f"{number_of_segments}\n"
+            f"- {feature}\n"
         )
 
 
@@ -1509,3 +1616,5 @@ print(
 
 
 print("\n" + "=" * 75)
+print("STEP 7 COMPLETED SUCCESSFULLY")
+print("=" * 75)

@@ -1,5 +1,6 @@
 # ============================================================
 # Step2_Data_Preprocessing.py
+# MOBILE PRODUCT DATA PREPROCESSING
 # ============================================================
 
 import os
@@ -12,505 +13,693 @@ import pandas as pd
 # ============================================================
 
 input_file = "Mobile Reviews Sentiment null.csv"
+
 output_file = "cleaned_mobile_reviews.csv"
 
 
 # ============================================================
-# 2. LOAD DATASET
+# 2. CHECK INPUT FILE
 # ============================================================
+
+if not os.path.exists(input_file):
+
+    raise FileNotFoundError(
+
+        f"\nERROR: {input_file} not found.\n"
+        "Please place the original dataset in the project folder."
+
+    )
+
+
+# ============================================================
+# 3. LOAD DATASET
+# ============================================================
+
+df = pd.read_csv(
+
+    input_file,
+
+    low_memory=False
+
+)
+
+
+# Clean column names
+df.columns = (
+
+    df.columns
+    .str.strip()
+
+)
+
 
 print("\n" + "=" * 70)
 print("MOBILE PRODUCT DATA PREPROCESSING")
 print("=" * 70)
 
-if not os.path.exists(input_file):
-    raise FileNotFoundError(
-        f"\nERROR: Input file not found: {input_file}"
-    )
 
-df = pd.read_csv(
-    input_file,
-    low_memory=False
+print(
+
+    "\nOriginal Dataset Shape:",
+
+    df.shape
+
 )
 
-# Remove leading/trailing spaces from column names
-df.columns = df.columns.str.strip()
 
-print("\nDataset loaded successfully.")
-print("Original Dataset Shape:", df.shape)
+print("\nOriginal Columns:")
 
 
-# ============================================================
-# 3. DISPLAY ORIGINAL COLUMNS
-# ============================================================
+for column in df.columns:
 
-print("\n" + "=" * 70)
-print("ORIGINAL COLUMNS")
-print("=" * 70)
-
-for i, column in enumerate(df.columns, start=1):
-    print(f"{i}. {column}")
+    print(
+        "-",
+        column
+    )
 
 
 # ============================================================
-# 4. CHECK REQUIRED COLUMNS
+# 4. REQUIRED RAW COLUMNS
 # ============================================================
 
-required_columns = [
+required_raw_columns = [
+
+    "brand",
     "model",
+
     "price_usd",
     "rating",
+
     "battery_life_rating",
     "camera_rating",
     "performance_rating",
     "design_rating",
-    "display_rating"
+    "display_rating",
+
+    "helpful_votes",
+
+    "country"
+
 ]
 
-missing_columns = [
+
+missing_raw_columns = [
+
     column
-    for column in required_columns
+
+    for column in required_raw_columns
+
     if column not in df.columns
+
 ]
 
-if missing_columns:
+
+if missing_raw_columns:
+
     raise ValueError(
-        "\nERROR: Required columns are missing:\n"
-        + "\n".join(
+
+        "\nERROR: Required columns are missing "
+        "from the ORIGINAL dataset:\n\n"
+
+        +
+
+        "\n".join(
+
             f"- {column}"
-            for column in missing_columns
-        )
-    )
 
-print("\nRequired columns verified successfully.")
+            for column in missing_raw_columns
 
-
-# ============================================================
-# 5. HANDLE BRAND
-# ============================================================
-
-if "brand" not in df.columns:
-
-    brand_columns = [
-        column
-        for column in df.columns
-        if column.lower().startswith("brand_")
-    ]
-
-    if brand_columns:
-
-        print("\nBrand one-hot columns detected.")
-
-        # Vectorized reconstruction instead of apply()
-        brand_values = df[brand_columns].apply(
-            pd.to_numeric,
-            errors="coerce"
         )
 
-        brand_name = brand_values.idxmax(axis=1)
+        +
 
-        max_value = brand_values.max(axis=1)
+        "\n\nPlease check that you are using "
+        "the original Mobile Reviews Sentiment dataset."
 
-        df["brand"] = np.where(
-            max_value > 0,
-            brand_name.str.replace(
-                "brand_",
-                "",
-                regex=False
-            ),
-            "Unknown"
-        )
-
-        # Remove original one-hot columns
-        df.drop(
-            columns=brand_columns,
-            inplace=True
-        )
-
-        print("Brand column reconstructed successfully.")
-
-    else:
-
-        print(
-            "\nWARNING: 'brand' column not found."
-        )
-
-        df["brand"] = "Unknown"
-
-
-# ============================================================
-# 6. HANDLE OPTIONAL COUNTRY COLUMN
-# ============================================================
-
-if "country" in df.columns:
-
-    print("\nCountry column detected.")
-
-    df["country"] = (
-        df["country"]
-        .astype("string")
-        .str.strip()
-    )
-
-    df["country"] = df["country"].fillna(
-        "Unknown"
-    )
-
-else:
-
-    print(
-        "\nNOTE: Country column is not available "
-        "in the dataset."
     )
 
 
 # ============================================================
-# 7. HANDLE MODEL COLUMN
+# 5. REMOVE EXACT DUPLICATES
 # ============================================================
 
-df["model"] = (
-    df["model"]
-    .astype("string")
-    .str.strip()
+print("\n" + "=" * 70)
+print("DUPLICATE CHECK")
+print("=" * 70)
+
+
+duplicate_count = df.duplicated().sum()
+
+
+print(
+
+    "Duplicate rows found:",
+
+    duplicate_count
+
 )
 
-df["model"] = df["model"].fillna(
-    "Unknown"
+
+if duplicate_count > 0:
+
+    df = (
+
+        df
+        .drop_duplicates()
+        .reset_index(drop=True)
+
+    )
+
+
+print(
+
+    "Dataset shape after duplicate removal:",
+
+    df.shape
+
 )
 
 
 # ============================================================
-# 8. NUMERIC COLUMNS
+# 6. NUMERIC COLUMNS
 # ============================================================
 
 numeric_columns = [
+
+    "age",
+
     "price_usd",
+    "price_local",
+
+    "exchange_rate_to_usd",
+
     "rating",
+
     "battery_life_rating",
     "camera_rating",
     "performance_rating",
     "design_rating",
-    "display_rating"
+    "display_rating",
+
+    "helpful_votes"
+
 ]
 
-# Add engagement score if available
-if "engagement_score" in df.columns:
-    numeric_columns.append(
-        "engagement_score"
-    )
 
+# Only convert columns that actually exist
+numeric_columns = [
 
-# ============================================================
-# 9. DATA TYPE CONVERSION
-# ============================================================
+    column
+
+    for column in numeric_columns
+
+    if column in df.columns
+
+]
+
 
 print("\n" + "=" * 70)
-print("DATA TYPE CONVERSION")
+print("NUMERIC TYPE CONVERSION")
 print("=" * 70)
+
 
 for column in numeric_columns:
 
     df[column] = pd.to_numeric(
+
         df[column],
+
         errors="coerce"
+
     )
 
-    print(
-        f"{column:<25} -> numeric"
-    )
-
-
-# ============================================================
-# 10. MISSING VALUES BEFORE CLEANING
-# ============================================================
-
-print("\n" + "=" * 70)
-print("MISSING VALUES BEFORE CLEANING")
-print("=" * 70)
-
-missing_before = df.isnull().sum()
-
-missing_before = (
-    missing_before[
-        missing_before > 0
-    ]
-    .sort_values(
-        ascending=False
-    )
-)
-
-if missing_before.empty:
-
-    print("No missing values found.")
-
-else:
-
-    print(missing_before)
 
 print(
-    "\nTotal missing values:",
-    df.isnull().sum().sum()
+
+    "\nNumeric columns converted successfully."
+
 )
 
 
 # ============================================================
-# 11. HANDLE INFINITE VALUES
+# 7. HANDLE INFINITE VALUES
 # ============================================================
 
-df.replace(
+df = df.replace(
+
     [np.inf, -np.inf],
-    np.nan,
-    inplace=True
+
+    np.nan
+
 )
 
 
 # ============================================================
-# 12. FILL NUMERIC MISSING VALUES
+# 8. CREATE ENGAGEMENT SCORE
 # ============================================================
 
 print("\n" + "=" * 70)
-print("NUMERIC MISSING VALUE HANDLING")
+print("ENGAGEMENT SCORE FEATURE ENGINEERING")
 print("=" * 70)
 
-for column in numeric_columns:
 
-    if df[column].isnull().any():
+# helpful_votes represents user engagement.
+# log1p reduces the effect of extremely large vote counts.
 
-        median_value = df[column].median()
+df["helpful_votes"] = (
 
-        if pd.isna(median_value):
-            median_value = 0
+    pd.to_numeric(
 
-        df[column] = df[column].fillna(
-            median_value
-        )
+        df["helpful_votes"],
 
-        print(
-            f"{column:<25} -> filled with median "
-            f"{median_value:.2f}"
-        )
+        errors="coerce"
 
-
-# ============================================================
-# 13. HANDLE CATEGORICAL MISSING VALUES
-# ============================================================
-
-print("\n" + "=" * 70)
-print("CATEGORICAL MISSING VALUE HANDLING")
-print("=" * 70)
-
-categorical_columns = [
-    column
-    for column in [
-        "brand",
-        "country",
-        "model"
-    ]
-    if column in df.columns
-]
-
-for column in categorical_columns:
-
-    missing_count = df[column].isnull().sum()
-
-    if missing_count > 0:
-
-        df[column] = df[column].fillna(
-            "Unknown"
-        )
-
-        print(
-            f"{column:<25} -> filled with 'Unknown'"
-        )
-
-
-# ============================================================
-# 14. REMOVE DUPLICATE RECORDS
-# ============================================================
-
-print("\n" + "=" * 70)
-print("DUPLICATE RECORD REMOVAL")
-print("=" * 70)
-
-duplicates_before = df.duplicated().sum()
-
-print(
-    "Duplicates before removal:",
-    duplicates_before
-)
-
-df.drop_duplicates(
-    inplace=True
-)
-
-df.reset_index(
-    drop=True,
-    inplace=True
-)
-
-duplicates_after = df.duplicated().sum()
-
-print(
-    "Duplicates after removal:",
-    duplicates_after
-)
-
-
-# ============================================================
-# 15. SELECT RELEVANT FEATURES
-# ============================================================
-
-selected_columns = [
-    "brand",
-    "model"
-]
-
-# Keep country when available
-if "country" in df.columns:
-    selected_columns.append(
-        "country"
     )
 
-selected_columns.extend([
+    .fillna(0)
+
+)
+
+
+# Make sure negative values do not occur
+df["helpful_votes"] = (
+
+    df["helpful_votes"]
+    .clip(lower=0)
+
+)
+
+
+df["engagement_score"] = (
+
+    np.log1p(
+        df["helpful_votes"]
+    )
+
+)
+
+
+print(
+
+    "engagement_score created successfully."
+
+)
+
+
+print(
+
+    "\nEngagement Score Statistics:"
+
+)
+
+
+print(
+
+    df[
+        "engagement_score"
+    ]
+    .describe()
+
+)
+
+
+# ============================================================
+# 9. HANDLE MISSING NUMERIC VALUES
+# ============================================================
+
+print("\n" + "=" * 70)
+print("MISSING NUMERIC VALUES")
+print("=" * 70)
+
+
+numeric_features_for_model = [
+
     "price_usd",
     "rating",
+
     "battery_life_rating",
     "camera_rating",
     "performance_rating",
     "design_rating",
-    "display_rating"
-])
+    "display_rating",
 
-# Keep engagement score when available
-if "engagement_score" in df.columns:
-    selected_columns.append(
-        "engagement_score"
+    "engagement_score"
+
+]
+
+
+for column in numeric_features_for_model:
+
+    median_value = (
+
+        df[column]
+        .median()
+
     )
 
 
-df_cleaned = df[
-    selected_columns
-].copy()
+    if pd.isna(median_value):
+
+        median_value = 0
 
 
-# ============================================================
-# 16. FINAL MISSING VALUE CHECK
-# ============================================================
+    df[column] = (
 
-print("\n" + "=" * 70)
-print("FINAL MISSING VALUE CHECK")
-print("=" * 70)
+        df[column]
+        .fillna(
+            median_value
+        )
 
-final_missing = df_cleaned.isnull().sum()
+    )
 
-print(final_missing)
-
-total_missing = (
-    final_missing.sum()
-)
 
 print(
-    "\nTotal remaining missing values:",
-    total_missing
+
+    "\nMissing numeric values handled successfully."
+
 )
 
 
-# ============================================================
-# 17. FINAL DATA TYPE CHECK
-# ============================================================
+print(
 
-print("\n" + "=" * 70)
-print("FINAL DATA TYPES")
-print("=" * 70)
+    "\nRemaining missing values:"
+
+)
+
 
 print(
-    df_cleaned.dtypes
+
+    df[
+        numeric_features_for_model
+    ]
+    .isnull()
+    .sum()
+
 )
 
 
 # ============================================================
-# 18. FINAL DATASET INFORMATION
+# 10. HANDLE CATEGORICAL COLUMNS
+# ============================================================
+
+categorical_columns = [
+
+    "brand",
+    "model",
+    "country"
+
+]
+
+
+for column in categorical_columns:
+
+    df[column] = (
+
+        df[column]
+        .astype(str)
+        .str.strip()
+
+    )
+
+
+    df[column] = (
+
+        df[column]
+        .replace(
+            ["", "nan", "None"],
+            "Unknown"
+        )
+
+    )
+
+
+print("\n" + "=" * 70)
+print("CATEGORICAL VALUES HANDLED")
+print("=" * 70)
+
+
+for column in categorical_columns:
+
+    print(
+
+        f"{column}: "
+        f"{df[column].nunique()} unique values"
+
+    )
+
+
+# ============================================================
+# 11. SELECT FINAL COLUMNS
+# ============================================================
+
+final_columns = [
+
+    "brand",
+    "model",
+    "country",
+
+    "price_usd",
+
+    "rating",
+
+    "battery_life_rating",
+    "camera_rating",
+    "performance_rating",
+    "design_rating",
+    "display_rating",
+
+    "helpful_votes",
+
+    "engagement_score"
+
+]
+
+
+# Keep only columns that exist
+final_columns = [
+
+    column
+
+    for column in final_columns
+
+    if column in df.columns
+
+]
+
+
+df_cleaned = (
+
+    df[
+        final_columns
+    ]
+    .copy()
+
+)
+
+
+# ============================================================
+# 12. FINAL MISSING VALUE CHECK
 # ============================================================
 
 print("\n" + "=" * 70)
-print("FINAL DATASET")
+print("FINAL DATA QUALITY CHECK")
 print("=" * 70)
 
+
 print(
+
     "\nFinal Dataset Shape:",
+
     df_cleaned.shape
+
 )
 
-print("\nFinal Columns:")
-
-for i, column in enumerate(
-    df_cleaned.columns,
-    start=1
-):
-    print(f"{i}. {column}")
-
-
-# ============================================================
-# 19. DISPLAY SAMPLE DATA
-# ============================================================
-
-print("\n" + "=" * 70)
-print("FIRST 10 CLEANED RECORDS")
-print("=" * 70)
 
 print(
-    df_cleaned.head(10).to_string(
-        index=False
+
+    "\nFinal Columns:"
+
+)
+
+
+for column in df_cleaned.columns:
+
+    print(
+        "-",
+        column
     )
-)
 
-
-# ============================================================
-# 20. BRAND DISTRIBUTION
-# ============================================================
-
-print("\n" + "=" * 70)
-print("BRAND DISTRIBUTION")
-print("=" * 70)
 
 print(
-    df_cleaned["brand"]
-    .value_counts()
+
+    "\nMissing Values:"
+
+)
+
+
+print(
+
+    df_cleaned
+    .isnull()
+    .sum()
+
 )
 
 
 # ============================================================
-# 21. SAVE CLEANED DATASET
+# 13. VERIFY ENGAGEMENT SCORE
+# ============================================================
+
+if "engagement_score" not in df_cleaned.columns:
+
+    raise ValueError(
+
+        "\nERROR: engagement_score was not created.\n"
+        "Please check the helpful_votes column."
+
+    )
+
+
+# ============================================================
+# 14. VERIFY CLUSTERING FEATURES
+# ============================================================
+
+clustering_features = [
+
+    "price_usd",
+    "rating",
+
+    "battery_life_rating",
+    "camera_rating",
+    "performance_rating",
+    "design_rating",
+    "display_rating",
+
+    "engagement_score"
+
+]
+
+
+missing_clustering_features = [
+
+    column
+
+    for column in clustering_features
+
+    if column not in df_cleaned.columns
+
+]
+
+
+if missing_clustering_features:
+
+    raise ValueError(
+
+        "\nERROR: Clustering features are missing:\n"
+
+        +
+
+        "\n".join(
+
+            f"- {column}"
+
+            for column in missing_clustering_features
+
+        )
+
+    )
+
+
+print("\n" + "=" * 70)
+print("CLUSTERING FEATURE VALIDATION")
+print("=" * 70)
+
+
+print(
+
+    "\nAll 8 clustering features are available."
+
+)
+
+
+for number, feature in enumerate(
+
+    clustering_features,
+
+    start=1
+
+):
+
+    print(
+
+        f"{number}. {feature}"
+
+    )
+
+
+# ============================================================
+# 15. SAVE CLEANED DATASET
 # ============================================================
 
 df_cleaned.to_csv(
+
     output_file,
+
     index=False
+
+)
+
+
+print("\n" + "=" * 70)
+print("CLEANED DATASET SAVED")
+print("=" * 70)
+
+
+print(
+
+    "\nOutput File:",
+
+    output_file
+
+)
+
+
+print(
+
+    "Final Dataset Shape:",
+
+    df_cleaned.shape
+
 )
 
 
 # ============================================================
-# 22. COMPLETION
+# 16. FINAL SUMMARY
 # ============================================================
 
 print("\n" + "=" * 70)
-print("PREPROCESSING COMPLETED SUCCESSFULLY")
+print("STEP 2 PREPROCESSING COMPLETED SUCCESSFULLY")
 print("=" * 70)
 
+
+print("\nFeatures prepared for clustering:")
+
+
+for feature in clustering_features:
+
+    print(
+        "-",
+        feature
+    )
+
+
 print(
-    f"\nCleaned dataset saved as:"
-    f"\n{output_file}"
+
+    "\nOutput:",
+
+    "cleaned_mobile_reviews.csv"
+
 )
 
-print("\nPreprocessing performed:")
-print("1. Missing value handling")
-print("2. Duplicate removal")
-print("3. Data type conversion")
-print("4. Relevant feature selection")
-print("5. Brand/model/country preservation")
 
-print("\nNote:")
-print(
-    "Encoding and scaling will be performed in "
-    "the machine-learning/clustering pipeline."
-)
+print("\n" + "=" * 70)

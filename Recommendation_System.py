@@ -3,19 +3,20 @@
 # ============================================================
 
 import os
+import json
 import joblib
+import numpy as np
 import pandas as pd
 
 from sklearn.metrics.pairwise import cosine_similarity
 
-
-# ============================================================
 # 1. FILE PATHS
-# ============================================================
 
 input_file = "clustered_mobile_products.csv"
 
 scaler_file = "mobile_scaler.pkl"
+
+metadata_file = "clustering_metadata.pkl"
 
 output_folder = "recommendations"
 
@@ -24,52 +25,55 @@ output_file = os.path.join(
     "all_product_recommendations.csv"
 )
 
+recommendation_metadata_file = os.path.join(
+    output_folder,
+    "recommendation_metadata.json"
+)
 
-# ============================================================
-# 2. CREATE OUTPUT FOLDER
-# ============================================================
 
 os.makedirs(
     output_folder,
     exist_ok=True
 )
 
-
-# ============================================================
-# 3. CHECK INPUT FILE
-# ============================================================
+# 2. CHECK REQUIRED FILES
 
 if not os.path.exists(input_file):
 
     raise FileNotFoundError(
+
         f"\nERROR: {input_file} not found.\n"
+
         "Please run Step4_Clustering.py first."
+
     )
 
-
-# ============================================================
-# 4. CHECK SCALER FILE
-# ============================================================
 
 if not os.path.exists(scaler_file):
 
     raise FileNotFoundError(
+
         f"\nERROR: {scaler_file} not found.\n"
+
         "Please run Step4_Clustering.py first."
+
     )
 
+# 3. LOAD DATA
 
-# ============================================================
-# 5. LOAD CLUSTERED PRODUCT DATA
-# ============================================================
-
-product_df = pd.read_csv(
+df = pd.read_csv(
     input_file
 )
 
-product_df.columns = (
-    product_df.columns
+
+df.columns = (
+    df.columns
     .str.strip()
+)
+
+
+scaler = joblib.load(
+    scaler_file
 )
 
 
@@ -77,78 +81,21 @@ print("\n" + "=" * 70)
 print("MOBILE PRODUCT RECOMMENDATION SYSTEM")
 print("=" * 70)
 
+
 print(
-    "\nProduct Dataset Shape:",
-    product_df.shape
+    "\nInput File:",
+    input_file
 )
 
 
-# ============================================================
-# 6. REQUIRED COLUMNS
-# ============================================================
+print(
+    "Dataset Shape:",
+    df.shape
+)
 
-required_columns = [
+# 4. EXACT SAME FEATURES AS STEP 4
 
-    "brand",
-    "model",
-
-    "price_usd",
-    "rating",
-
-    "battery_life_rating",
-    "camera_rating",
-    "performance_rating",
-    "design_rating",
-    "display_rating",
-
-    "engagement_score",
-
-    "Cluster",
-    "Segment"
-
-]
-
-
-missing_columns = [
-
-    column
-
-    for column in required_columns
-
-    if column not in product_df.columns
-
-]
-
-
-if missing_columns:
-
-    raise ValueError(
-
-        "\nERROR: Required columns are missing:\n"
-
-        + "\n".join(
-
-            f"- {column}"
-
-            for column in missing_columns
-
-        )
-
-        + "\n\nPlease run Step2_Data_Preprocessing.py "
-          "and Step4_Clustering.py again."
-
-    )
-
-
-# ============================================================
-# 7. EXACT RECOMMENDATION FEATURES
-# ============================================================
-
-# IMPORTANT:
-# These MUST be exactly the same features and
-# same order used by Step4_Clustering.py.
-
-product_features = [
+PRODUCT_FEATURES = [
 
     "price_usd",
 
@@ -168,15 +115,17 @@ product_features = [
 
 ]
 
-
 print("\n" + "=" * 70)
 print("RECOMMENDATION FEATURES")
 print("=" * 70)
 
 
 for number, feature in enumerate(
-    product_features,
+
+    PRODUCT_FEATURES,
+
     start=1
+
 ):
 
     print(
@@ -186,370 +135,266 @@ for number, feature in enumerate(
 
 print(
     "\nTotal Recommendation Features:",
-    len(product_features)
+    len(PRODUCT_FEATURES)
 )
 
+# 5. CHECK REQUIRED COLUMNS
 
-# ============================================================
-# 8. LOAD SCALER
-# ============================================================
+required_columns = [
 
-print("\n" + "=" * 70)
-print("LOADING STANDARD SCALER")
-print("=" * 70)
+    "brand",
+    "model",
 
+    "price_usd",
+    "rating",
 
-scaler = joblib.load(
-    scaler_file
-)
+    "battery_life_rating",
+    "camera_rating",
+    "performance_rating",
+    "design_rating",
+    "display_rating",
 
+    "engagement_score",
 
-print(
-    "\nScaler loaded successfully."
-)
+    "review_count",
 
+    "Cluster",
+    "Segment"
 
-# ============================================================
-# 9. VALIDATE SCALER FEATURE COUNT
-# ============================================================
+]
 
-if not hasattr(
-    scaler,
-    "n_features_in_"
-):
+missing_columns = [
 
-    raise ValueError(
-        "\nERROR: Loaded scaler does not contain "
-        "n_features_in_.\n"
-        "Please run Step4_Clustering.py again."
-    )
+    column
 
+    for column in required_columns
 
-scaler_feature_count = (
-    scaler.n_features_in_
-)
+    if column not in df.columns
 
+]
 
-recommendation_feature_count = (
-    len(product_features)
-)
-
-
-print(
-    "\nScaler expected features:",
-    scaler_feature_count
-)
-
-
-print(
-    "Recommendation features:",
-    recommendation_feature_count
-)
-
-
-if (
-    scaler_feature_count
-    != recommendation_feature_count
-):
+if missing_columns:
 
     raise ValueError(
 
-        "\nERROR: Feature count mismatch!\n\n"
+        "\nERROR: Required columns are missing:\n"
 
-        f"Scaler expects "
-        f"{scaler_feature_count} features.\n"
+        + "\n".join(
 
-        f"Recommendation system provides "
-        f"{recommendation_feature_count} features.\n\n"
+            f"- {column}"
 
-        "IMPORTANT:\n"
-        "Run Step2_Data_Preprocessing.py first,\n"
-        "then run Step4_Clustering.py again,\n"
-        "then run Step5_Recommendation.py."
-
-    )
-
-
-print(
-    "\nScaler feature count validation passed."
-)
-
-
-# ============================================================
-# 10. CHECK SCALER FEATURE ORDER
-# ============================================================
-
-if hasattr(
-    scaler,
-    "feature_names_in_"
-):
-
-    scaler_features = list(
-        scaler.feature_names_in_
-    )
-
-    print("\n" + "=" * 70)
-    print("SCALER FEATURE ORDER")
-    print("=" * 70)
-
-    for number, feature in enumerate(
-        scaler_features,
-        start=1
-    ):
-
-        print(
-            f"{number}. {feature}"
-        )
-
-
-    if scaler_features != product_features:
-
-        raise ValueError(
-
-            "\nERROR: Feature order mismatch!\n\n"
-
-            "Scaler features:\n"
-
-            + "\n".join(
-
-                f"- {feature}"
-
-                for feature in scaler_features
-
-            )
-
-            + "\n\nRecommendation features:\n"
-
-            + "\n".join(
-
-                f"- {feature}"
-
-                for feature in product_features
-
-            )
-
-            + "\n\n"
-              "Please rerun Step4_Clustering.py "
-              "and then Step5_Recommendation.py."
+            for column in missing_columns
 
         )
 
+        + "\n\n"
 
-    print(
-        "\nScaler feature order validation passed."
-    )
-
-
-# ============================================================
-# 11. CONVERT FEATURES TO NUMERIC
-# ============================================================
-
-print("\n" + "=" * 70)
-print("NUMERIC FEATURE CONVERSION")
-print("=" * 70)
-
-
-for column in product_features:
-
-    product_df[column] = pd.to_numeric(
-
-        product_df[column],
-
-        errors="coerce"
+        "Please run the corrected Step4_Clustering.py again."
 
     )
 
+# 6. VALIDATE PRODUCT DATA
 
-print(
-    "\nAll recommendation features converted "
-    "to numeric format."
-)
+duplicate_products = (
 
-
-# ============================================================
-# 12. HANDLE INFINITE VALUES
-# ============================================================
-
-product_df[
-    product_features
-] = (
-
-    product_df[
-        product_features
-    ]
-
-    .replace(
-        [float("inf"), float("-inf")],
-        pd.NA
-    )
-
-)
-
-
-# ============================================================
-# 13. MISSING VALUE CHECK
-# ============================================================
-
-print("\n" + "=" * 70)
-print("MISSING VALUE CHECK")
-print("=" * 70)
-
-
-missing_before = (
-
-    product_df[
-        product_features
-    ]
-
-    .isnull()
-
-    .sum()
-
-)
-
-
-print(
-    "\nMissing values before handling:"
-)
-
-print(
-    missing_before
-)
-
-
-# ============================================================
-# 14. FILL MISSING VALUES
-# ============================================================
-
-for column in product_features:
-
-    median_value = (
-
-        product_df[column]
-
-        .median()
-    )
-
-
-    if pd.isna(
-        median_value
-    ):
-
-        median_value = 0
-
-
-    product_df[column] = (
-
-        product_df[column]
-
-        .fillna(
-            median_value
-        )
-
-    )
-
-
-print(
-    "\nMissing values after handling:"
-)
-
-
-print(
-
-    product_df[
-        product_features
-    ]
-
-    .isnull()
-
-    .sum()
-
-)
-
-
-# ============================================================
-# 15. CHECK UNIQUE PRODUCTS
-# ============================================================
-
-print("\n" + "=" * 70)
-print("PRODUCT CHECK")
-print("=" * 70)
-
-
-duplicate_count = (
-
-    product_df
-
+    df
     .duplicated(
         subset=[
             "brand",
             "model"
         ]
     )
-
     .sum()
 
 )
 
 
-print(
-    "Duplicate product records:",
-    duplicate_count
-)
-
-
-# ============================================================
-# 16. REMOVE DUPLICATE PRODUCTS
-# ============================================================
-
-if duplicate_count > 0:
-
-    product_df = (
-
-        product_df
-
-        .drop_duplicates(
-
-            subset=[
-                "brand",
-                "model"
-            ]
-
-        )
-
-        .reset_index(
-            drop=True
-        )
-
-    )
-
-
-print(
-    "Unique Products:",
-    len(product_df)
-)
-
-
-if len(product_df) < 2:
+if duplicate_products > 0:
 
     raise ValueError(
 
-        "\nERROR: At least 2 unique products "
-        "are required for recommendation."
+        "\nERROR: Duplicate brand + model products found.\n"
+
+        "Step4 should contain one row per product."
 
     )
 
 
-# ============================================================
-# 17. CREATE FEATURE MATRIX
-# ============================================================
+if len(df) < 2:
+
+    raise ValueError(
+
+        "\nERROR: At least two products are required "
+        "for recommendations."
+
+    )
+
+# 7. CONVERT FEATURES TO NUMERIC
+
+for column in PRODUCT_FEATURES:
+
+    df[column] = pd.to_numeric(
+
+        df[column],
+
+        errors="coerce"
+
+    )
+
+# 8. CHECK MISSING VALUES
+
+missing_values = (
+
+    df[
+        PRODUCT_FEATURES
+    ]
+    .isnull()
+    .sum()
+
+)
+
+
+if missing_values.sum() > 0:
+
+    print(
+        "\nMissing values found:"
+    )
+
+    print(
+        missing_values[
+            missing_values > 0
+        ]
+    )
+
+    raise ValueError(
+
+        "\nERROR: Recommendation features contain "
+        "missing values.\n\n"
+
+        "Do NOT manually fill them in Step5.\n"
+
+        "Please rerun Step2 and Step4."
+
+    )
+
+# 9. CHECK INFINITE VALUES
+
+if np.isinf(
+
+    df[
+        PRODUCT_FEATURES
+    ]
+    .to_numpy()
+
+).any():
+
+    raise ValueError(
+
+        "\nERROR: Infinite values found "
+        "in recommendation features."
+
+    )
+
+# 10. VALIDATE SCALER
+
+if not hasattr(
+
+    scaler,
+
+    "n_features_in_"
+
+):
+
+    raise ValueError(
+
+        "\nERROR: The saved scaler does not contain "
+        "feature information.\n\n"
+
+        "Please rerun Step4_Clustering.py."
+
+    )
+
+
+if scaler.n_features_in_ != len(
+
+    PRODUCT_FEATURES
+
+):
+
+    raise ValueError(
+
+        "\nERROR: Scaler feature count mismatch.\n\n"
+
+        f"Scaler expects: "
+        f"{scaler.n_features_in_}\n"
+
+        f"Recommendation features: "
+        f"{len(PRODUCT_FEATURES)}\n\n"
+
+        "Please rerun Step4_Clustering.py."
+
+    )
+
+
+print(
+    "\nScaler Feature Count:",
+    scaler.n_features_in_
+)
+
+# 11. VALIDATE FEATURE ORDER
+
+if hasattr(
+
+    scaler,
+
+    "feature_names_in_"
+
+):
+
+    scaler_features = list(
+
+        scaler.feature_names_in_
+
+    )
+
+
+    if scaler_features != PRODUCT_FEATURES:
+
+        raise ValueError(
+
+            "\nERROR: Feature order mismatch between "
+            "Step4 and Step5.\n\n"
+
+            f"Step4 Scaler Features:\n"
+            f"{scaler_features}\n\n"
+
+            f"Step5 Features:\n"
+            f"{PRODUCT_FEATURES}\n\n"
+
+            "Please rerun Step4 using the corrected code."
+
+        )
+
+
+    print(
+        "Feature Order Validation: PASSED"
+    )
+
+
+else:
+
+    print(
+        "Feature Order Validation: "
+        "Feature names unavailable in saved scaler."
+    )
+
+# 12. CREATE FEATURE MATRIX
 
 X = (
 
-    product_df[
-        product_features
+    df[
+        PRODUCT_FEATURES
     ]
-
     .copy()
 
 )
@@ -561,19 +406,11 @@ print("=" * 70)
 
 
 print(
-    "\nFeature Matrix Shape:",
+    "Feature Matrix Shape:",
     X.shape
 )
 
-
-# ============================================================
-# 18. STANDARDIZE FEATURES
-# ============================================================
-
-print("\n" + "=" * 70)
-print("STANDARDIZATION")
-print("=" * 70)
-
+# 13. APPLY SCALER
 
 X_scaled = scaler.transform(
     X
@@ -581,31 +418,19 @@ X_scaled = scaler.transform(
 
 
 print(
-    "\nFeatures standardized successfully."
-)
-
-
-print(
-    "Scaled Matrix Shape:",
+    "\nScaled Feature Matrix Shape:",
     X_scaled.shape
 )
 
-
-# ============================================================
-# 19. COSINE SIMILARITY
-# ============================================================
+# 14. CALCULATE COSINE SIMILARITY
 
 print("\n" + "=" * 70)
 print("COSINE SIMILARITY")
 print("=" * 70)
 
 
-similarity_matrix = (
-
-    cosine_similarity(
-        X_scaled
-    )
-
+similarity_matrix = cosine_similarity(
+    X_scaled
 )
 
 
@@ -615,410 +440,317 @@ print(
 
 
 print(
-    "Matrix Shape:",
+    "Similarity Matrix Shape:",
     similarity_matrix.shape
 )
 
-
-# ============================================================
-# 20. GENERATE RECOMMENDATIONS
-# ============================================================
-
-print("\n" + "=" * 70)
-print("GENERATING RECOMMENDATIONS")
-print("=" * 70)
-
-
-recommendation_list = []
-
+# 15. RECOMMENDATION SETTINGS
 
 TOP_N = 5
 
 
-for product_index in range(
-    len(product_df)
+print(
+    "\nNumber of Recommendations per Product:",
+    TOP_N
+)
+
+# 16. CREATE PRODUCT INDEX
+
+product_keys = (
+
+    df["brand"].astype(str)
+
+    + "|||"
+
+    + df["model"].astype(str)
+
+)
+
+
+product_index = {
+
+    key: index
+
+    for index, key in enumerate(
+        product_keys
+    )
+
+}
+
+# 17. GENERATE RECOMMENDATIONS
+
+recommendation_rows = []
+
+
+for selected_index in range(
+    len(df)
 ):
 
+    selected_product = df.iloc[
+        selected_index
+    ]
 
-    # --------------------------------------------------------
-    # SELECT PRODUCT
-    # --------------------------------------------------------
 
-    selected_product = (
+    selected_brand = (
+        selected_product["brand"]
+    )
 
-        product_df.iloc[
-            product_index
-        ]
 
+    selected_model = (
+        selected_product["model"]
     )
 
 
     selected_cluster = (
+        selected_product["Cluster"]
+    )
 
-        selected_product[
-            "Cluster"
+
+    selected_segment = (
+        selected_product["Segment"]
+    )
+
+    # Get all similarity scores
+
+    similarity_scores = (
+
+        similarity_matrix[
+            selected_index
         ]
+        .copy()
 
     )
 
+    # Exclude selected product itself
 
-    # --------------------------------------------------------
-    # GET SIMILARITY SCORES
-    # --------------------------------------------------------
+    similarity_scores[
+        selected_index
+    ] = -1
 
-    similarity_scores = list(
+    # Create candidate dataframe
 
-        enumerate(
+    candidates = df.copy()
 
-            similarity_matrix[
-                product_index
-            ]
 
+    candidates[
+        "Similarity_Score"
+    ] = similarity_scores
+
+
+    candidates[
+        "_Index"
+    ] = np.arange(
+        len(df)
+    )
+
+    # Exclude selected product
+
+    candidates = candidates[
+        candidates["_Index"]
+        != selected_index
+    ]
+
+    # Same-cluster candidates
+
+    same_cluster = candidates[
+        candidates["Cluster"]
+        == selected_cluster
+    ].copy()
+
+
+    same_cluster = (
+
+        same_cluster
+        .sort_values(
+            "Similarity_Score",
+            ascending=False
         )
 
     )
 
+    # Global candidates
 
-    # --------------------------------------------------------
-    # REMOVE SELECTED PRODUCT
-    # --------------------------------------------------------
+    all_candidates = (
 
-    similarity_scores = [
-
-        item
-
-        for item in similarity_scores
-
-        if item[0] != product_index
-
-    ]
-
-
-    # --------------------------------------------------------
-    # PREFER SAME CLUSTER
-    # --------------------------------------------------------
-
-    same_cluster_scores = [
-
-        item
-
-        for item in similarity_scores
-
-        if (
-
-            product_df.iloc[
-                item[0]
-            ]["Cluster"]
-
-            == selected_cluster
-
+        candidates
+        .sort_values(
+            "Similarity_Score",
+            ascending=False
         )
 
-    ]
+    )
+
+    selected_recommendations = []
+
+    for _, row in same_cluster.iterrows():
+
+        if len(
+            selected_recommendations
+        ) >= TOP_N:
+
+            break
 
 
-    # --------------------------------------------------------
-    # USE SAME CLUSTER IF ENOUGH PRODUCTS EXIST
-    # --------------------------------------------------------
+        selected_recommendations.append(
+            row
+        )
+
 
     if len(
-        same_cluster_scores
-    ) >= TOP_N:
+        selected_recommendations
+    ) < TOP_N:
 
-        similarity_scores = (
-            same_cluster_scores
-        )
+        selected_indices = {
 
+            int(row["_Index"])
 
-    # --------------------------------------------------------
-    # SORT BY SIMILARITY
-    # --------------------------------------------------------
+            for row in selected_recommendations
 
-    similarity_scores = sorted(
-
-        similarity_scores,
-
-        key=lambda x: x[1],
-
-        reverse=True
-
-    )
+        }
 
 
-    # --------------------------------------------------------
-    # TOP 5
-    # --------------------------------------------------------
+        for _, row in all_candidates.iterrows():
 
-    top_recommendations = (
-
-        similarity_scores[
-            :TOP_N
-        ]
-
-    )
+            candidate_index = int(
+                row["_Index"]
+            )
 
 
-    # --------------------------------------------------------
-    # STORE RECOMMENDATIONS
-    # --------------------------------------------------------
+            if candidate_index in selected_indices:
 
-    for rank, (
+                continue
 
-        recommended_index,
 
-        similarity_score
+            selected_recommendations.append(
+                row
+            )
 
-    ) in enumerate(
 
-        top_recommendations,
+            selected_indices.add(
+                candidate_index
+            )
+
+
+            if len(
+                selected_recommendations
+            ) >= TOP_N:
+
+                break
+
+
+    # Create recommendation records
+
+    for rank, recommendation in enumerate(
+
+        selected_recommendations,
 
         start=1
 
     ):
 
-
-        recommended_product = (
-
-            product_df.iloc[
-                recommended_index
-            ]
-
-        )
-
-
-        recommendation_list.append({
-
-            # ------------------------------------------------
-            # SELECTED PRODUCT
-            # ------------------------------------------------
+        recommendation_rows.append({
 
             "Selected_Brand":
-
-                selected_product[
-                    "brand"
-                ],
-
+                selected_brand,
 
             "Selected_Model":
-
-                selected_product[
-                    "model"
-                ],
-
+                selected_model,
 
             "Selected_Segment":
-
-                selected_product[
-                    "Segment"
-                ],
-
+                selected_segment,
 
             "Selected_Price_USD":
-
-                round(
-
-                    selected_product[
-                        "price_usd"
-                    ],
-
-                    2
-
+                float(
+                    selected_product["price_usd"]
                 ),
-
 
             "Selected_Rating":
-
-                round(
-
-                    selected_product[
-                        "rating"
-                    ],
-
-                    2
-
+                float(
+                    selected_product["rating"]
                 ),
 
-
-            # ------------------------------------------------
-            # RECOMMENDATION RANK
-            # ------------------------------------------------
-
-            "Recommendation_Rank":
-
-                rank,
-
-
-            # ------------------------------------------------
-            # RECOMMENDED PRODUCT
-            # ------------------------------------------------
 
             "Recommended_Brand":
-
-                recommended_product[
-                    "brand"
-                ],
-
+                recommendation["brand"],
 
             "Recommended_Model":
-
-                recommended_product[
-                    "model"
-                ],
-
+                recommendation["model"],
 
             "Recommended_Segment":
-
-                recommended_product[
-                    "Segment"
-                ],
-
+                recommendation["Segment"],
 
             "Recommended_Price_USD":
-
-                round(
-
-                    recommended_product[
-                        "price_usd"
-                    ],
-
-                    2
-
+                float(
+                    recommendation["price_usd"]
                 ),
-
 
             "Recommended_Rating":
-
-                round(
-
-                    recommended_product[
-                        "rating"
-                    ],
-
-                    2
-
+                float(
+                    recommendation["rating"]
                 ),
-
 
             "Recommended_Battery":
-
-                round(
-
-                    recommended_product[
+                float(
+                    recommendation[
                         "battery_life_rating"
-                    ],
-
-                    2
-
+                    ]
                 ),
-
 
             "Recommended_Camera":
-
-                round(
-
-                    recommended_product[
+                float(
+                    recommendation[
                         "camera_rating"
-                    ],
-
-                    2
-
+                    ]
                 ),
-
 
             "Recommended_Performance":
-
-                round(
-
-                    recommended_product[
+                float(
+                    recommendation[
                         "performance_rating"
-                    ],
-
-                    2
-
+                    ]
                 ),
-
 
             "Recommended_Design":
-
-                round(
-
-                    recommended_product[
+                float(
+                    recommendation[
                         "design_rating"
-                    ],
-
-                    2
-
+                    ]
                 ),
-
 
             "Recommended_Display":
-
-                round(
-
-                    recommended_product[
+                float(
+                    recommendation[
                         "display_rating"
-                    ],
-
-                    2
-
+                    ]
                 ),
-
 
             "Recommended_Engagement":
-
-                round(
-
-                    recommended_product[
+                float(
+                    recommendation[
                         "engagement_score"
-                    ],
-
-                    2
-
+                    ]
                 ),
 
-
-            # ------------------------------------------------
-            # SIMILARITY
-            # ------------------------------------------------
-
             "Similarity_Score":
+                float(
+                    recommendation[
+                        "Similarity_Score"
+                    ]
+                ),
 
-                round(
-
-                    similarity_score,
-
-                    4
-
-                )
+            "Recommendation_Rank":
+                rank
 
         })
 
+# 18. CREATE RECOMMENDATION DATAFRAME
 
-# ============================================================
-# 21. CREATE RECOMMENDATION DATAFRAME
-# ============================================================
-
-recommendations = pd.DataFrame(
-    recommendation_list
+recommendations_df = pd.DataFrame(
+    recommendation_rows
 )
 
 
-print(
-    "\nTotal Recommendation Records:",
-    len(recommendations)
-)
-
-
-# ============================================================
-# 22. VALIDATE RECOMMENDATIONS
-# ============================================================
-
-print("\n" + "=" * 70)
-print("RECOMMENDATION VALIDATION")
-print("=" * 70)
-
-
-if recommendations.empty:
+if recommendations_df.empty:
 
     raise ValueError(
 
@@ -1026,109 +758,192 @@ if recommendations.empty:
 
     )
 
+# 19. ROUND NUMERIC VALUES
 
-# ============================================================
-# 23. SIMILARITY STATISTICS
-# ============================================================
+numeric_columns = [
 
-average_similarity = (
+    "Selected_Price_USD",
+    "Selected_Rating",
 
-    recommendations[
-        "Similarity_Score"
-    ]
+    "Recommended_Price_USD",
+    "Recommended_Rating",
 
-    .mean()
+    "Recommended_Battery",
+    "Recommended_Camera",
+    "Recommended_Performance",
+    "Recommended_Design",
+    "Recommended_Display",
+    "Recommended_Engagement",
 
-)
+    "Similarity_Score"
 
+]
 
-highest_similarity = (
+for column in numeric_columns:
 
-    recommendations[
-        "Similarity_Score"
-    ]
+    recommendations_df[column] = (
 
-    .max()
+        recommendations_df[column]
+        .round(4)
 
-)
+    )
 
+# 20. VALIDATE RECOMMENDATION OUTPUT
 
-lowest_similarity = (
+expected_output_columns = [
 
-    recommendations[
-        "Similarity_Score"
-    ]
+    "Selected_Brand",
+    "Selected_Model",
+    "Selected_Segment",
+    "Selected_Price_USD",
+    "Selected_Rating",
 
-    .min()
+    "Recommended_Brand",
+    "Recommended_Model",
+    "Recommended_Segment",
+    "Recommended_Price_USD",
+    "Recommended_Rating",
 
-)
+    "Recommended_Battery",
+    "Recommended_Camera",
+    "Recommended_Performance",
+    "Recommended_Design",
+    "Recommended_Display",
+    "Recommended_Engagement",
 
+    "Similarity_Score",
+    "Recommendation_Rank"
 
-print(
+]
 
-    f"\nAverage Similarity Score : "
-    f"{average_similarity:.4f}"
+missing_output_columns = [
 
-)
+    column
 
+    for column in expected_output_columns
 
-print(
+    if column not in recommendations_df.columns
 
-    f"Highest Similarity Score : "
-    f"{highest_similarity:.4f}"
+]
 
-)
+if missing_output_columns:
 
+    raise ValueError(
 
-print(
+        "\nERROR: Recommendation output "
+        "is missing columns:\n"
 
-    f"Lowest Similarity Score  : "
-    f"{lowest_similarity:.4f}"
+        + "\n".join(
 
-)
+            f"- {column}"
 
+            for column in missing_output_columns
 
-print(
-    "\nRecommendation quality is "
-    "reported using cosine similarity."
-)
+        )
 
+    )
 
-# ============================================================
-# 24. CHECK TOP-5 RECOMMENDATION COUNT
-# ============================================================
+# 21. VALIDATE TOP-N RECOMMENDATIONS
 
 recommendation_counts = (
 
-    recommendations
-
+    recommendations_df
     .groupby(
         [
             "Selected_Brand",
             "Selected_Model"
         ]
     )
-
     .size()
 
 )
 
+invalid_counts = (
 
-print(
-    "\nRecommendation count statistics:"
+    recommendation_counts
+    < min(
+        TOP_N,
+        len(df) - 1
+    )
+
 )
 
+if invalid_counts.any():
 
-print(
-    recommendation_counts.describe()
+    print(
+        "\nWARNING: Some products have fewer "
+        "than the requested number of recommendations."
+    )
+
+# 22. VALIDATE SELF-RECOMMENDATIONS
+
+self_recommendations = (
+
+    recommendations_df[
+        (
+            recommendations_df[
+                "Selected_Brand"
+            ]
+
+            ==
+
+            recommendations_df[
+                "Recommended_Brand"
+            ]
+        )
+
+        &
+
+        (
+            recommendations_df[
+                "Selected_Model"
+            ]
+
+            ==
+
+            recommendations_df[
+                "Recommended_Model"
+            ]
+        )
+    ]
+
 )
 
+if len(self_recommendations) > 0:
 
-# ============================================================
-# 25. SAVE RECOMMENDATIONS
-# ============================================================
+    raise ValueError(
 
-recommendations.to_csv(
+        "\nERROR: Self-recommendation detected.\n"
+
+        "A product must not recommend itself."
+
+    )
+
+# 23. SORT FINAL OUTPUT
+
+recommendations_df = (
+
+    recommendations_df
+    .sort_values(
+
+        [
+
+            "Selected_Brand",
+            "Selected_Model",
+            "Recommendation_Rank"
+
+        ]
+
+    )
+    .reset_index(
+        drop=True
+    )
+
+)
+
+# 24. SAVE RECOMMENDATIONS
+
+recommendations_df.to_csv(
 
     output_file,
 
@@ -1137,99 +952,243 @@ recommendations.to_csv(
 )
 
 
-print("\n" + "=" * 70)
-print("RECOMMENDATION FILE SAVED")
-print("=" * 70)
-
-
 print(
-    "\nOutput Folder:",
-    output_folder
+    "\nRecommendation file saved as:"
 )
 
-
 print(
-    "\nOutput File:",
     output_file
 )
 
 
-# ============================================================
+# 25. CREATE RECOMMENDATION METADATA
+
+metadata = {
+
+    "method":
+        "Cosine Similarity",
+
+    "top_n":
+        TOP_N,
+
+    "features":
+        PRODUCT_FEATURES,
+
+    "number_of_products":
+        int(len(df)),
+
+    "number_of_recommendation_rows":
+        int(len(recommendations_df)),
+
+    "scaler_features":
+        int(scaler.n_features_in_),
+
+    "cluster_aware_recommendation":
+        True
+
+}
+
+with open(
+
+    recommendation_metadata_file,
+
+    "w",
+
+    encoding="utf-8"
+
+) as file:
+
+    json.dump(
+
+        metadata,
+
+        file,
+
+        indent=4
+
+    )
+
+
+print(
+    "Recommendation metadata saved as:"
+)
+
+print(
+    recommendation_metadata_file
+)
+
 # 26. DISPLAY SAMPLE RECOMMENDATIONS
-# ============================================================
 
 print("\n" + "=" * 70)
 print("SAMPLE RECOMMENDATIONS")
 print("=" * 70)
 
 
+sample_product = df.iloc[0]
+
+
+sample_brand = sample_product[
+    "brand"
+]
+
+
+sample_model = sample_product[
+    "model"
+]
+
+
+sample_recommendations = (
+
+    recommendations_df[
+        (
+            recommendations_df[
+                "Selected_Brand"
+            ]
+
+            ==
+
+            sample_brand
+
+        )
+
+        &
+
+        (
+            recommendations_df[
+                "Selected_Model"
+            ]
+
+            ==
+
+            sample_model
+
+        )
+    ]
+
+)
+
 print(
 
-    recommendations
+    f"\nSelected Product: "
+    f"{sample_brand} {sample_model}"
 
-    .head(20)
+)
 
+print("\nRecommended Products:")
+
+print(
+
+    sample_recommendations[
+        [
+            "Recommended_Brand",
+            "Recommended_Model",
+            "Recommended_Segment",
+            "Recommended_Price_USD",
+            "Recommended_Rating",
+            "Similarity_Score",
+            "Recommendation_Rank"
+        ]
+    ]
     .to_string(
         index=False
     )
 
 )
 
-
-# ============================================================
-# 27. FINAL SUMMARY
-# ============================================================
+# 27. RECOMMENDATION VALIDATION SUMMARY
 
 print("\n" + "=" * 70)
-print("RECOMMENDATION SYSTEM COMPLETED SUCCESSFULLY")
+print("RECOMMENDATION VALIDATION")
 print("=" * 70)
 
-
-print("\nMethod Used:")
-
 print(
-    "1. Product-level data"
+    "\nTotal Products:",
+    len(df)
 )
 
 print(
-    "2. 8 standardized product features"
+    "Total Recommendation Rows:",
+    len(recommendations_df)
 )
 
 print(
-    "3. StandardScaler from Step4"
+    "Expected Maximum Rows:",
+    len(df) * TOP_N
 )
 
 print(
-    "4. Cosine Similarity"
+    "\nSelf-Recommendations:",
+    len(self_recommendations)
 )
 
 print(
-    "5. Same-cluster preference"
+    "Feature Count Used:",
+    len(PRODUCT_FEATURES)
 )
 
 print(
-    "6. Top-5 recommendations"
+    "Similarity Method:",
+    "Cosine Similarity"
 )
 
+print(
+    "Cluster-Aware Filtering:",
+    "Enabled"
+)
 
-print("\nRecommendation Features:")
+# 28. FINAL OUTPUT COLUMNS
 
-for feature in product_features:
+print("\n" + "=" * 70)
+print("FINAL OUTPUT COLUMNS")
+print("=" * 70)
+
+for number, column in enumerate(
+
+    recommendations_df.columns,
+
+    start=1
+
+):
 
     print(
-        " -",
-        feature
+        f"{number}. {column}"
     )
 
-
-print("\nOutput:")
-
-print(
-    "recommendations/"
-    "all_product_recommendations.csv"
-)
-
+# 29. FINAL COMPLETION MESSAGE
 
 print("\n" + "=" * 70)
 print("STEP 5 COMPLETED SUCCESSFULLY")
 print("=" * 70)
+
+print(
+    "\nRecommendation system method:"
+)
+
+print(
+    "Cosine Similarity"
+)
+
+print(
+    "\nRecommendation features:"
+)
+
+for feature in PRODUCT_FEATURES:
+
+    print(
+        f"- {feature}"
+    )
+
+print(
+    "\nTop recommendations per product:",
+    TOP_N
+)
+
+print(
+    "\nOutput file:"
+)
+
+print(
+    output_file
+)
+
+print("\n" + "=" * 70)

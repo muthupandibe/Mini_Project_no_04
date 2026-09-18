@@ -1,6 +1,5 @@
 # ============================================================
 # Step4_Clustering.py
-# MOBILE PRODUCT CLUSTERING / SEGMENTATION
 # ============================================================
 
 import os
@@ -8,19 +7,14 @@ import joblib
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 
-
-# ============================================================
 # 1. LOAD CLEANED DATASET
-# ============================================================
 
 input_file = "cleaned_mobile_reviews.csv"
-
 
 if not os.path.exists(input_file):
 
@@ -29,33 +23,18 @@ if not os.path.exists(input_file):
         "Please run Step2_Data_Preprocessing.py first."
     )
 
-
 df = pd.read_csv(input_file)
 
-df.columns = (
-    df.columns
-    .str.strip()
-)
-
+df.columns = df.columns.str.strip()
 
 print("\n" + "=" * 70)
 print("MOBILE PRODUCT CLUSTERING / SEGMENTATION")
 print("=" * 70)
 
-print(
-    "\nInput File:",
-    input_file
-)
+print("\nInput File:", input_file)
+print("Original Dataset Shape:", df.shape)
 
-print(
-    "Original Dataset Shape:",
-    df.shape
-)
-
-
-# ============================================================
 # 2. CHECK REQUIRED COLUMNS
-# ============================================================
 
 required_columns = [
 
@@ -75,17 +54,13 @@ required_columns = [
 
 ]
 
-
 missing_columns = [
 
     column
-
     for column in required_columns
-
     if column not in df.columns
 
 ]
-
 
 if missing_columns:
 
@@ -94,27 +69,17 @@ if missing_columns:
         "\nERROR: Required columns are missing:\n"
 
         + "\n".join(
-
             f"- {column}"
-
             for column in missing_columns
-
         )
 
         + "\n\n"
-        "Please make sure Step2 creates "
-        "engagement_score."
+        "Please run Step2_Data_Preprocessing.py again "
+        "and make sure engagement_score is created."
 
     )
 
-
-# ============================================================
 # 3. SELECT CLUSTERING FEATURES
-# ============================================================
-
-# IMPORTANT:
-# This exact feature list and order MUST also be used
-# in Step5_Recommendation.py.
 
 clustering_features = [
 
@@ -136,11 +101,9 @@ clustering_features = [
 
 ]
 
-
 print("\n" + "=" * 70)
 print("CLUSTERING FEATURES")
 print("=" * 70)
-
 
 for number, feature in enumerate(
     clustering_features,
@@ -151,37 +114,25 @@ for number, feature in enumerate(
         f"{number}. {feature}"
     )
 
-
 print(
     "\nTotal Clustering Features:",
     len(clustering_features)
 )
 
-
-# ============================================================
-# 4. CONVERT FEATURES TO NUMERIC
-# ============================================================
+# 4. CONVERT CLUSTERING FEATURES TO NUMERIC
 
 for column in clustering_features:
 
     df[column] = pd.to_numeric(
-
         df[column],
-
         errors="coerce"
-
     )
 
-
-# ============================================================
 # 5. HANDLE INFINITE VALUES
-# ============================================================
 
 df[clustering_features] = (
 
-    df[
-        clustering_features
-    ]
+    df[clustering_features]
     .replace(
         [np.inf, -np.inf],
         np.nan
@@ -189,90 +140,85 @@ df[clustering_features] = (
 
 )
 
-
-# ============================================================
-# 6. HANDLE MISSING VALUES
-# ============================================================
+# 6. CHECK MISSING VALUES
 
 print("\n" + "=" * 70)
 print("MISSING VALUES BEFORE CLUSTERING")
 print("=" * 70)
 
-
 missing_values = (
 
-    df[
-        clustering_features
-    ]
+    df[clustering_features]
     .isnull()
     .sum()
 
 )
 
+print(missing_values)
 
-print(
-    missing_values
+total_missing = int(
+    missing_values.sum()
 )
 
+if total_missing > 0:
 
-for column in clustering_features:
+    raise ValueError(
 
-    median_value = (
+        "\nERROR: Missing values are still present "
+        "in clustering features.\n\n"
 
-        df[column]
-        .median()
+        "Please run Step2_Data_Preprocessing.py again "
+        "before running Step4.\n\n"
+
+        "Missing values:\n"
+        + missing_values[
+            missing_values > 0
+        ].to_string()
 
     )
 
+print(
+    "\nNo missing values found."
+)
 
-    if pd.isna(median_value):
+# 7. CLEAN PRODUCT IDENTIFIERS
 
-        median_value = 0
+df["brand"] = (
 
+    df["brand"]
+    .astype(str)
+    .str.strip()
 
-    df[column] = (
+)
 
-        df[column]
-        .fillna(median_value)
+df["model"] = (
 
+    df["model"]
+    .astype(str)
+    .str.strip()
+
+)
+
+if df["brand"].eq("").any():
+
+    raise ValueError(
+        "\nERROR: Empty brand values found."
     )
 
+if df["model"].eq("").any():
 
-print(
-    "\nMissing values handled successfully."
-)
+    raise ValueError(
+        "\nERROR: Empty model values found."
+    )
 
-
-print(
-    "\nMissing values after handling:"
-)
-
-
-print(
-    df[
-        clustering_features
-    ]
-    .isnull()
-    .sum()
-)
-
-
-# ============================================================
-# 7. PRODUCT-LEVEL AGGREGATION
-# ============================================================
-
-# Multiple reviews may belong to the same mobile model.
-# Therefore, we aggregate the review-level data into
-# one product-level record for each brand + model.
+# 8. PRODUCT-LEVEL AGGREGATION
 
 aggregation_dict = {
 
     feature: "mean"
-
     for feature in clustering_features
 
 }
-
 
 product_df = (
 
@@ -287,33 +233,82 @@ product_df = (
 
 )
 
+# Create review count separately
+
+review_counts = (
+
+    df
+    .groupby(
+        ["brand", "model"]
+    )
+    .size()
+    .reset_index(
+        name="review_count"
+    )
+
+)
+
+product_df = product_df.merge(
+
+    review_counts,
+
+    on=[
+        "brand",
+        "model"
+    ],
+
+    how="left"
+
+)
 
 print("\n" + "=" * 70)
 print("PRODUCT-LEVEL DATA")
 print("=" * 70)
-
 
 print(
     "Original Records      :",
     len(df)
 )
 
-
 print(
     "Unique Products       :",
     len(product_df)
 )
-
 
 print(
     "Product Dataset Shape :",
     product_df.shape
 )
 
+# 9. VALIDATE PRODUCT-LEVEL DATA
 
-# ============================================================
-# 8. CREATE FEATURE MATRIX
-# ============================================================
+duplicate_products = (
+
+    product_df
+    .duplicated(
+        subset=[
+            "brand",
+            "model"
+        ]
+    )
+    .sum()
+
+)
+
+if duplicate_products > 0:
+
+    raise ValueError(
+        "\nERROR: Duplicate product records found."
+    )
+
+
+if product_df["review_count"].isnull().any():
+
+    raise ValueError(
+        "\nERROR: review_count contains missing values."
+    )
+
+# 10. CREATE FEATURE MATRIX
 
 X = (
 
@@ -324,47 +319,59 @@ X = (
 
 )
 
-
 print(
     "\nFeature Matrix Shape:",
     X.shape
 )
 
+print(
+    "Number of Features:",
+    X.shape[1]
+)
 
-# ============================================================
-# 9. STANDARDIZE FEATURES
-# ============================================================
+# 11. STANDARDIZE FEATURES
 
 print("\n" + "=" * 70)
 print("FEATURE STANDARDIZATION")
 print("=" * 70)
 
-
 scaler = StandardScaler()
-
 
 X_scaled = scaler.fit_transform(
     X
 )
 
-
 print(
     "\nFeatures standardized successfully."
 )
-
 
 print(
     "Scaled Matrix Shape:",
     X_scaled.shape
 )
 
+# 12. VALIDATE SCALER FEATURE COUNT
 
-# ============================================================
-# 10. SAVE SCALER
-# ============================================================
+if scaler.n_features_in_ != len(clustering_features):
+
+    raise ValueError(
+
+        "\nERROR: Scaler feature count mismatch.\n"
+
+        f"Expected: {len(clustering_features)}\n"
+
+        f"Actual: {scaler.n_features_in_}"
+
+    )
+
+print(
+    "Scaler Feature Count:",
+    scaler.n_features_in_
+)
+
+# 13. SAVE SCALER
 
 scaler_file = "mobile_scaler.pkl"
-
 
 joblib.dump(
     scaler,
@@ -377,24 +384,31 @@ print(
     scaler_file
 )
 
-
-# ============================================================
-# 11. ELBOW METHOD - INERTIA CHECK
-# ============================================================
+# 14. ELBOW METHOD - INERTIA CHECK
 
 print("\n" + "=" * 70)
 print("ELBOW METHOD - INERTIA CHECK")
 print("=" * 70)
 
-
 inertia_values = []
 
-
-k_values = range(
-    2,
-    9
+max_k = min(
+    8,
+    len(product_df) - 1
 )
 
+k_values = list(
+    range(
+        2,
+        max_k + 1
+    )
+)
+
+if len(k_values) < 2:
+
+    raise ValueError(
+        "\nERROR: Not enough products for elbow analysis."
+    )
 
 for k in k_values:
 
@@ -408,23 +422,17 @@ for k in k_values:
 
     )
 
-
     model.fit(
         X_scaled
     )
-
 
     inertia_values.append(
         model.inertia_
     )
 
-
-# ============================================================
-# 12. PRINT INERTIA VALUES
-# ============================================================
+# 15. PRINT INERTIA VALUES
 
 print("\nInertia Values:")
-
 
 for k, inertia in zip(
 
@@ -441,22 +449,17 @@ for k, inertia in zip(
 
     )
 
-
-# ============================================================
-# 13. SAVE ELBOW RESULTS
-# ============================================================
+# 16. SAVE ELBOW RESULTS
 
 elbow_results = pd.DataFrame({
 
-    "K": list(k_values),
+    "K": k_values,
 
     "Inertia": inertia_values
 
 })
 
-
 elbow_file = "elbow_inertia.csv"
-
 
 elbow_results.to_csv(
 
@@ -466,25 +469,20 @@ elbow_results.to_csv(
 
 )
 
-
 print(
     "\nElbow results saved as:",
     elbow_file
 )
 
-
-# ============================================================
-# 14. ELBOW CURVE
-# ============================================================
+# 17. ELBOW CURVE
 
 plt.figure(
     figsize=(9, 6)
 )
 
-
 plt.plot(
 
-    list(k_values),
+    k_values,
 
     inertia_values,
 
@@ -492,54 +490,64 @@ plt.plot(
 
 )
 
-
 plt.title(
     "Elbow Method for Optimal Number of Clusters"
 )
-
 
 plt.xlabel(
     "Number of Clusters (K)"
 )
 
-
 plt.ylabel(
     "Inertia"
 )
 
-
 plt.xticks(
-    list(k_values)
+    k_values
 )
-
 
 plt.grid(
     True,
     alpha=0.3
 )
 
-
 plt.tight_layout()
 
+elbow_plot_file = "elbow_curve.png"
+
+plt.savefig(
+
+    elbow_plot_file,
+
+    dpi=300,
+
+    bbox_inches="tight"
+
+)
 
 plt.show()
 
+plt.close()
 
-# ============================================================
-# 15. K-MEANS CLUSTERING
-# ============================================================
+print(
+    "Elbow plot saved as:",
+    elbow_plot_file
+)
+
+# 18. K-MEANS CLUSTERING
 
 print("\n" + "=" * 70)
 print("K-MEANS CLUSTERING")
 print("=" * 70)
 
-
-# IMPORTANT:
-# Based on the project's confirmed elbow point,
-# the final number of clusters is K = 3.
-
 NUMBER_OF_CLUSTERS = 3
 
+if NUMBER_OF_CLUSTERS > len(product_df):
+
+    raise ValueError(
+        "\nERROR: Number of clusters cannot exceed "
+        "number of products."
+    )
 
 kmeans = KMeans(
 
@@ -551,7 +559,6 @@ kmeans = KMeans(
 
 )
 
-
 product_df["Cluster"] = (
 
     kmeans.fit_predict(
@@ -560,24 +567,18 @@ product_df["Cluster"] = (
 
 )
 
-
 print(
     "\nK-Means clustering completed successfully."
 )
-
 
 print(
     "Number of Clusters:",
     NUMBER_OF_CLUSTERS
 )
 
-
-# ============================================================
-# 16. SAVE K-MEANS MODEL
-# ============================================================
+# 19. SAVE K-MEANS MODEL
 
 model_file = "mobile_kmeans_model.pkl"
-
 
 joblib.dump(
 
@@ -587,30 +588,18 @@ joblib.dump(
 
 )
 
-
 print(
     "K-Means model saved as:",
     model_file
 )
 
-
-# ============================================================
-# 17. SILHOUETTE SCORE
-# ============================================================
+# 20. SILHOUETTE SCORE
 
 print("\n" + "=" * 70)
 print("SILHOUETTE SCORE")
 print("=" * 70)
 
-
-sample_size = min(
-
-    10000,
-
-    len(X_scaled)
-
-)
-
+evaluation_sample_size = len(X_scaled)
 
 silhouette = silhouette_score(
 
@@ -618,12 +607,9 @@ silhouette = silhouette_score(
 
     product_df["Cluster"],
 
-    sample_size=sample_size,
-
-    random_state=42
+    metric="euclidean"
 
 )
-
 
 print(
 
@@ -636,24 +622,19 @@ print(
 
 )
 
-
 print(
 
     "Evaluation Sample Size:",
 
-    sample_size
+    evaluation_sample_size
 
 )
 
-
-# ============================================================
-# 18. CLUSTER DISTRIBUTION
-# ============================================================
+# 21. CLUSTER DISTRIBUTION
 
 print("\n" + "=" * 70)
 print("CLUSTER DISTRIBUTION")
 print("=" * 70)
-
 
 cluster_counts = (
 
@@ -665,16 +646,13 @@ cluster_counts = (
 
 )
 
-
 print(
     "\nNumber of Products:"
 )
 
-
 print(
     cluster_counts
 )
-
 
 cluster_percentage = (
 
@@ -690,7 +668,6 @@ cluster_percentage = (
 
 )
 
-
 print(
     "\nCluster Percentage:"
 )
@@ -700,69 +677,84 @@ print(
     cluster_percentage
 )
 
-
-# ============================================================
-# 19. PRICE VS RATING CLUSTER VISUALIZATION
-# ============================================================
+# 22. PRICE VS RATING CLUSTER VISUALIZATION
 
 plt.figure(
     figsize=(9, 6)
 )
 
+for cluster in sorted(
+    product_df["Cluster"].unique()
+):
 
-sns.scatterplot(
+    cluster_data = product_df[
+        product_df["Cluster"] == cluster
+    ]
 
-    data=product_df,
 
-    x="price_usd",
+    plt.scatter(
 
-    y="rating",
+        cluster_data["price_usd"],
 
-    hue="Cluster",
+        cluster_data["rating"],
 
-    palette="Set1",
+        s=70,
 
-    s=70,
+        alpha=0.8,
 
-    alpha=0.8
+        label=f"Cluster {cluster}"
 
-)
-
+    )
 
 plt.title(
     "Mobile Product Segmentation using K-Means"
 )
 
-
 plt.xlabel(
     "Price (USD)"
 )
-
 
 plt.ylabel(
     "Rating"
 )
 
-
 plt.legend(
     title="Cluster"
 )
 
+plt.grid(
+    True,
+    alpha=0.3
+)
 
 plt.tight_layout()
 
+cluster_plot_file = "cluster_segmentation.png"
+
+plt.savefig(
+
+    cluster_plot_file,
+
+    dpi=300,
+
+    bbox_inches="tight"
+
+)
 
 plt.show()
 
+plt.close()
 
-# ============================================================
-# 20. CLUSTER-WISE PRODUCT PROFILE
-# ============================================================
+print(
+    "Cluster plot saved as:",
+    cluster_plot_file
+)
+
+# 23. CLUSTER-WISE PRODUCT PROFILE
 
 print("\n" + "=" * 70)
 print("CLUSTER-WISE PRODUCT PROFILE")
 print("=" * 70)
-
 
 cluster_analysis = (
 
@@ -777,15 +769,11 @@ cluster_analysis = (
 
 )
 
-
 print(
     cluster_analysis
 )
 
-
-# ============================================================
-# 21. CREATE CLUSTER SUMMARY
-# ============================================================
+# 24. CREATE CLUSTER SUMMARY
 
 cluster_profile = (
 
@@ -793,13 +781,22 @@ cluster_profile = (
     .groupby(
         "Cluster"
     )
-    .size()
-    .reset_index(
-        name="Product_Count"
+    .agg(
+
+        Product_Count=(
+            "model",
+            "count"
+        ),
+
+        Review_Count=(
+            "review_count",
+            "sum"
+        )
+
     )
+    .reset_index()
 
 )
-
 
 cluster_profile["Percentage"] = (
 
@@ -817,7 +814,6 @@ cluster_profile["Percentage"] = (
 
 ).round(2)
 
-
 cluster_profile = (
 
     cluster_profile
@@ -825,24 +821,19 @@ cluster_profile = (
 
         cluster_analysis.reset_index(),
 
-        on="Cluster"
+        on="Cluster",
+
+        how="left"
 
     )
 
 )
 
-
-# ============================================================
-# 22. ASSIGN BUSINESS SEGMENT NAMES
-# ============================================================
+# 25. ASSIGN BUSINESS SEGMENT NAMES
 
 print("\n" + "=" * 70)
 print("PRODUCT SEGMENT LABELING")
 print("=" * 70)
-
-
-# Sort clusters according to average price.
-# K-Means cluster numbers are arbitrary.
 
 sorted_clusters = (
 
@@ -856,37 +847,15 @@ sorted_clusters = (
 
 )
 
+segment_names = {
 
-segment_names = {}
+    sorted_clusters[0]: "Budget",
 
+    sorted_clusters[1]: "Mid-Range",
 
-if len(sorted_clusters) == 3:
+    sorted_clusters[2]: "Premium"
 
-    segment_names = {
-
-        sorted_clusters[0]: "Budget",
-
-        sorted_clusters[1]: "Mid-Range",
-
-        sorted_clusters[2]: "Premium"
-
-    }
-
-
-else:
-
-    for position, cluster in enumerate(
-
-        sorted_clusters,
-
-        start=1
-
-    ):
-
-        segment_names[
-            cluster
-        ] = f"Segment {position}"
-
+}
 
 product_df["Segment"] = (
 
@@ -899,7 +868,6 @@ product_df["Segment"] = (
 
 )
 
-
 cluster_profile["Segment"] = (
 
     cluster_profile[
@@ -911,15 +879,11 @@ cluster_profile["Segment"] = (
 
 )
 
-
-# ============================================================
-# 23. DISPLAY SEGMENT PROFILES
-# ============================================================
+# 26. DISPLAY SEGMENT PROFILES
 
 print("\n" + "=" * 70)
 print("SEGMENT PROFILE SUMMARY")
 print("=" * 70)
-
 
 print(
 
@@ -933,15 +897,11 @@ print(
 
 )
 
-
-# ============================================================
-# 24. BUSINESS INTERPRETATION
-# ============================================================
+# 27. BUSINESS INTERPRETATION
 
 print("\n" + "=" * 70)
 print("SEGMENT INTERPRETATION")
 print("=" * 70)
-
 
 for _, row in (
 
@@ -960,14 +920,12 @@ for _, row in (
 
     )
 
-
     print(
 
         f"Average Price       : "
         f"${row['price_usd']:.2f}"
 
     )
-
 
     print(
 
@@ -976,14 +934,12 @@ for _, row in (
 
     )
 
-
     print(
 
         f"Average Battery     : "
         f"{row['battery_life_rating']:.2f}"
 
     )
-
 
     print(
 
@@ -992,14 +948,12 @@ for _, row in (
 
     )
 
-
     print(
 
         f"Average Performance : "
         f"{row['performance_rating']:.2f}"
 
     )
-
 
     print(
 
@@ -1008,14 +962,12 @@ for _, row in (
 
     )
 
-
     print(
 
         f"Average Display     : "
         f"{row['display_rating']:.2f}"
 
     )
-
 
     print(
 
@@ -1024,7 +976,6 @@ for _, row in (
 
     )
 
-
     print(
 
         f"Product Count       : "
@@ -1032,6 +983,12 @@ for _, row in (
 
     )
 
+    print(
+
+        f"Review Count        : "
+        f"{int(row['Review_Count'])}"
+
+    )
 
     print(
 
@@ -1040,15 +997,11 @@ for _, row in (
 
     )
 
-
-# ============================================================
-# 25. BRAND DISTRIBUTION BY CLUSTER
-# ============================================================
+# 28. BRAND DISTRIBUTION BY CLUSTER
 
 print("\n" + "=" * 70)
 print("BRAND DISTRIBUTION BY CLUSTER")
 print("=" * 70)
-
 
 brand_cluster = pd.crosstab(
 
@@ -1062,15 +1015,11 @@ brand_cluster = pd.crosstab(
 
 )
 
-
 print(
     brand_cluster
 )
 
-
-# ============================================================
-# 26. SEGMENT DISTRIBUTION VISUALIZATION
-# ============================================================
+# 29. SEGMENT DISTRIBUTION VISUALIZATION
 
 segment_counts = (
 
@@ -1078,54 +1027,77 @@ segment_counts = (
         "Segment"
     ]
     .value_counts()
+    .reindex(
+        [
+            "Budget",
+            "Mid-Range",
+            "Premium"
+        ]
+    )
+    .dropna()
 
 )
-
 
 plt.figure(
     figsize=(9, 6)
 )
 
+plt.bar(
 
-segment_counts.plot(
-    kind="bar"
+    segment_counts.index,
+
+    segment_counts.values
+    
 )
-
 
 plt.title(
     "Mobile Product Segment Distribution"
 )
 
-
 plt.xlabel(
     "Product Segment"
 )
-
 
 plt.ylabel(
     "Number of Products"
 )
 
-
 plt.xticks(
     rotation=0
 )
 
+plt.grid(
+    axis="y",
+    alpha=0.3
+)
 
 plt.tight_layout()
 
+segment_plot_file = "segment_distribution.png"
+
+
+plt.savefig(
+
+    segment_plot_file,
+
+    dpi=300,
+
+    bbox_inches="tight"
+
+)
 
 plt.show()
 
+plt.close()
 
-# ============================================================
-# 27. SAVE CLUSTER PROFILE
-# ============================================================
-
-profile_file = (
-    "cluster_profile_summary.csv"
+print(
+    "Segment distribution plot saved as:",
+    segment_plot_file
 )
 
+# 30. SAVE CLUSTER PROFILE
+
+profile_file = "cluster_profile_summary.csv"
 
 cluster_profile.to_csv(
 
@@ -1135,7 +1107,6 @@ cluster_profile.to_csv(
 
 )
 
-
 print(
 
     "\nCluster profile saved as:",
@@ -1144,15 +1115,38 @@ print(
 
 )
 
+# 31. SAVE CLUSTERED PRODUCT DATASET
 
-# ============================================================
-# 28. SAVE CLUSTERED PRODUCT DATASET
-# ============================================================
+output_file = "clustered_mobile_products.csv"
 
-output_file = (
-    "clustered_mobile_products.csv"
-)
+# Final column order for compatibility
 
+final_columns = [
+
+    "brand",
+    "model",
+
+    "price_usd",
+    "rating",
+
+    "battery_life_rating",
+    "camera_rating",
+    "performance_rating",
+    "design_rating",
+    "display_rating",
+
+    "engagement_score",
+
+    "review_count",
+
+    "Cluster",
+    "Segment"
+
+]
+
+product_df = product_df[
+    final_columns
+]
 
 product_df.to_csv(
 
@@ -1162,7 +1156,6 @@ product_df.to_csv(
 
 )
 
-
 print(
 
     "Clustered product dataset saved as:",
@@ -1171,10 +1164,7 @@ print(
 
 )
 
-
-# ============================================================
-# 29. SAVE CLUSTERING METADATA
-# ============================================================
+# 32. SAVE CLUSTERING METADATA
 
 metadata = {
 
@@ -1188,15 +1178,17 @@ metadata = {
         float(silhouette),
 
     "random_state":
-        42
+        42,
+
+    "product_count":
+        int(len(product_df)),
+
+    "review_count":
+        int(len(df))
 
 }
 
-
-metadata_file = (
-    "clustering_metadata.pkl"
-)
-
+metadata_file = "clustering_metadata.pkl"
 
 joblib.dump(
 
@@ -1206,7 +1198,6 @@ joblib.dump(
 
 )
 
-
 print(
 
     "Clustering metadata saved as:",
@@ -1215,66 +1206,157 @@ print(
 
 )
 
+# 33. FINAL VALIDATION
 
-# ============================================================
-# 30. FINAL SUMMARY
-# ============================================================
+print("\n" + "=" * 70)
+print("FINAL VALIDATION")
+print("=" * 70)
+
+expected_output_columns = [
+
+    "brand",
+    "model",
+
+    "price_usd",
+    "rating",
+
+    "battery_life_rating",
+    "camera_rating",
+    "performance_rating",
+    "design_rating",
+    "display_rating",
+
+    "engagement_score",
+
+    "review_count",
+
+    "Cluster",
+    "Segment"
+
+]
+
+missing_output_columns = [
+
+    column
+    for column in expected_output_columns
+    if column not in product_df.columns
+
+]
+
+if missing_output_columns:
+
+    raise ValueError(
+
+        "\nERROR: Final output is missing columns:\n"
+
+        + "\n".join(
+            f"- {column}"
+            for column in missing_output_columns
+        )
+
+    )
+
+if len(product_df) != product_df[
+    ["brand", "model"]
+].drop_duplicates().shape[0]:
+
+    raise ValueError(
+        "\nERROR: Multiple rows exist for the same product."
+    )
+
+if product_df["Cluster"].nunique() != NUMBER_OF_CLUSTERS:
+
+    raise ValueError(
+        "\nERROR: Expected exactly 3 clusters."
+    )
+
+if product_df["Segment"].isnull().any():
+
+    raise ValueError(
+        "\nERROR: Some products do not have a Segment label."
+    )
+
+print(
+    "\nFinal Output Columns:"
+)
+
+
+for number, column in enumerate(
+
+    product_df.columns,
+
+    start=1
+
+):
+
+    print(
+        f"{number}. {column}"
+    )
+
+
+print(
+    "\nFinal Product Dataset Shape:",
+    product_df.shape
+)
+
+# 34. FINAL SUMMARY
 
 print("\n" + "=" * 70)
 print("CLUSTERING ANALYSIS COMPLETED SUCCESSFULLY")
 print("=" * 70)
 
-
 print("\nOutputs Created:")
-
 
 print(
     "1. clustered_mobile_products.csv"
 )
 
-
 print(
     "2. cluster_profile_summary.csv"
 )
-
 
 print(
     "3. elbow_inertia.csv"
 )
 
-
 print(
-    "4. mobile_scaler.pkl"
+    "4. elbow_curve.png"
 )
 
-
 print(
-    "5. mobile_kmeans_model.pkl"
+    "5. cluster_segmentation.png"
 )
 
-
 print(
-    "6. clustering_metadata.pkl"
+    "6. segment_distribution.png"
 )
 
+print(
+    "7. mobile_scaler.pkl"
+)
+
+print(
+    "8. mobile_kmeans_model.pkl"
+)
+
+print(
+    "9. clustering_metadata.pkl"
+)
 
 print("\nMethod:")
 print(
     "K-Means Clustering"
 )
 
-
 print(
     "\nNumber of Clusters:",
     NUMBER_OF_CLUSTERS
 )
 
-
 print(
     "\nElbow Point:",
     "K = 3"
 )
-
 
 print(
     "\nSilhouette Score:",
@@ -1284,9 +1366,7 @@ print(
     )
 )
 
-
 print("\nSegment Labels:")
-
 
 for cluster, segment in (
 
@@ -1304,14 +1384,11 @@ for cluster, segment in (
     )
 
 
-# ============================================================
-# 31. INERTIA SUMMARY
-# ============================================================
+# 35. INERTIA SUMMARY
 
 print("\n" + "=" * 70)
 print("FINAL INERTIA SUMMARY")
 print("=" * 70)
-
 
 for k, inertia in zip(
 
@@ -1327,7 +1404,6 @@ for k, inertia in zip(
         f"Inertia = {inertia:.2f}"
 
     )
-
 
 print("\n" + "=" * 70)
 print("STEP 4 COMPLETED")

@@ -1,156 +1,144 @@
 # ============================================================
-# Step1_Data_Collection.py
+# STEP 1: DATA COLLECTION
 # ============================================================
 
-import os
+from pathlib import Path
 import pandas as pd
 
+# 1. SET PROJECT PATH
 
-# ============================================================
-# 1. LOAD DATASET
-# ============================================================
+BASE_DIR = Path(__file__).resolve().parent
 
-file_path = "Mobile Reviews Sentiment null.csv"
+INPUT_FILE = BASE_DIR / "Mobile Reviews Sentiment null.csv"
 
-print("\n" + "=" * 60)
-print("MOBILE REVIEWS DATA COLLECTION")
-print("=" * 60)
+# 2. CHECK WHETHER THE INPUT FILE EXISTS
 
-# Check whether file exists
-if not os.path.exists(file_path):
-    print(f"\nERROR: Dataset file not found!")
-    print(f"Expected file: {file_path}")
-    raise FileNotFoundError(file_path)
+if not INPUT_FILE.exists():
+    raise FileNotFoundError(
+        f"Dataset not found:\n{INPUT_FILE}\n\n"
+        "Please make sure 'Mobile Reviews Sentiment null.csv' "
+        "is present in the project folder."
+    )
 
-# Load dataset
-df = pd.read_csv(file_path, low_memory=False)
+# 3. LOAD THE DATASET
+
+df = pd.read_csv(INPUT_FILE)
+
+# 4. DISPLAY BASIC DATASET INFORMATION
+
+print("=" * 70)
+print("STEP 1 - DATA COLLECTION")
+print("=" * 70)
 
 print("\nDataset loaded successfully!")
+print(f"File: {INPUT_FILE.name}")
 
+# 5. DISPLAY NUMBER OF ROWS AND COLUMNS
 
-# ============================================================
-# 2. DATASET SHAPE
-# ============================================================
-
-print("\n" + "=" * 60)
+print("\n" + "-" * 70)
 print("DATASET SHAPE")
-print("=" * 60)
+print("-" * 70)
 
-print(f"Number of Rows    : {df.shape[0]}")
-print(f"Number of Columns : {df.shape[1]}")
+print(f"Number of rows    : {df.shape[0]}")
+print(f"Number of columns : {df.shape[1]}")
 
+# 6. DISPLAY COLUMN NAMES
 
-# ============================================================
-# 3. COLUMN NAMES
-# ============================================================
-
-print("\n" + "=" * 60)
+print("\n" + "-" * 70)
 print("COLUMN NAMES")
-print("=" * 60)
+print("-" * 70)
 
 for i, column in enumerate(df.columns, start=1):
-    print(f"{i}. {column}")
+    print(f"{i:2}. {column}")
 
+# 7. DISPLAY DATA TYPES
 
-# ============================================================
-# 4. DATA TYPES
-# ============================================================
-
-print("\n" + "=" * 60)
+print("\n" + "-" * 70)
 print("DATA TYPES")
-print("=" * 60)
+print("-" * 70)
 
 print(df.dtypes)
 
+# 8. DISPLAY FIRST 5 RECORDS
 
-# ============================================================
-# 5. DATASET INFORMATION
-# ============================================================
-
-print("\n" + "=" * 60)
-print("DATASET INFORMATION")
-print("=" * 60)
-
-df.info()
-
-
-# ============================================================
-# 6. FIRST 5 RECORDS
-# ============================================================
-
-print("\n" + "=" * 60)
+print("\n" + "-" * 70)
 print("FIRST 5 RECORDS")
-print("=" * 60)
+print("-" * 70)
 
 print(df.head())
 
+# 9. DISPLAY LAST 5 RECORDS
 
-# ============================================================
-# 7. MISSING VALUES
-# ============================================================
+print("\n" + "-" * 70)
+print("LAST 5 RECORDS")
+print("-" * 70)
 
-print("\n" + "=" * 60)
+print(df.tail())
+
+# 10. CHECK MISSING VALUES
+
+print("\n" + "-" * 70)
 print("MISSING VALUES")
-print("=" * 60)
+print("-" * 70)
 
 missing_values = df.isnull().sum()
 
 print(missing_values)
 
-total_missing = missing_values.sum()
+# 11. CHECK DUPLICATE RECORDS
 
-print(f"\nTotal Missing Values: {total_missing}")
-
-
-# ============================================================
-# 8. DUPLICATE RECORDS
-# ============================================================
-
-print("\n" + "=" * 60)
+print("\n" + "-" * 70)
 print("DUPLICATE RECORDS")
-print("=" * 60)
+print("-" * 70)
 
 duplicate_count = df.duplicated().sum()
 
-print(f"Number of Duplicate Records: {duplicate_count}")
+print(f"Number of duplicate rows: {duplicate_count}")
 
-if len(df) > 0:
-    duplicate_percentage = (duplicate_count / len(df)) * 100
-    print(f"Duplicate Percentage       : {duplicate_percentage:.2f}%")
+# 12. DISPLAY UNIQUE VALUES FOR IMPORTANT COLUMNS
 
+print("\n" + "-" * 70)
+print("UNIQUE VALUE INFORMATION")
+print("-" * 70)
 
-# ============================================================
-# 9. BASIC STATISTICAL SUMMARY
-# ============================================================
+if "brand" in df.columns:
+    print(f"Number of unique brands  : {df['brand'].nunique()}")
 
-print("\n" + "=" * 60)
-print("STATISTICAL SUMMARY")
-print("=" * 60)
+if "model" in df.columns:
+    print(f"Number of unique models  : {df['model'].nunique()}")
 
-print(df.describe(include="all").T)
+if "country" in df.columns:
+    print(f"Number of unique countries: {df['country'].nunique()}")
 
+# 13. DISPLAY BASIC STATISTICS
 
-# ============================================================
-# 10. UNIQUE VALUES
-# ============================================================
+print("\n" + "-" * 70)
+print("BASIC STATISTICAL SUMMARY")
+print("-" * 70)
 
-print("\n" + "=" * 60)
-print("UNIQUE VALUES")
-print("=" * 60)
+print(df.describe(include="all").transpose())
 
-print(df.nunique().sort_values(ascending=False))
+# 14. DISPLAY DATASET INFORMATION
 
+print("\n" + "-" * 70)
+print("DATASET INFORMATION")
+print("-" * 70)
 
-# ============================================================
-# 11. SAVE RAW DATASET COPY
-# ============================================================
+df.info()
 
-output_file = "collected_mobile_reviews.csv"
+# 15. FINAL MESSAGE
 
-df.to_csv(output_file, index=False)
+print("\n" + "=" * 70)
+print("STEP 1 DATA COLLECTION COMPLETED SUCCESSFULLY")
+print("=" * 70)
 
-print("\n" + "=" * 60)
-print("DATA COLLECTION COMPLETED SUCCESSFULLY")
-print("=" * 60)
-
-print(f"\nRaw dataset saved as: {output_file}")
+print("\nThe dataset has been loaded and inspected.")
+print("The following information was checked:")
+print("1. Dataset shape")
+print("2. Column names")
+print("3. Data types")
+print("4. First and last records")
+print("5. Missing values")
+print("6. Duplicate records")
+print("7. Unique values")
+print("8. Basic statistical summary")
